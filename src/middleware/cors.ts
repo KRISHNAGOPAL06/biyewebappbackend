@@ -55,8 +55,8 @@ export const corsMiddleware = cors({
       return callback(null, true);
     }
 
-    logger.warn(`[CORS] Access denied for origin: ${origin}`);
-    // ❌ DO NOT throw — just deny silently
+    
+    // DO NOT throw — just deny silently
     return callback(null, false);
   },
 
