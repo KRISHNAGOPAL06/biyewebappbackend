@@ -62,7 +62,12 @@ export class AuthService {
       logger.info('New user registration initiated', { email });
     }
 
-    await emailService.sendOTP(email, otp, 'register');
+    try {
+      await emailService.sendOTP(email, otp, 'register');
+    } catch (error) {
+      logger.error('Failed to send registration OTP', { email, error });
+      throw new Error(`Registration partially successful, but failed to send OTP: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
 
     await this.incrementOTPRateLimit(email);
 
@@ -338,7 +343,12 @@ export class AuthService {
       data: { otpHash, otpExpiry },
     });
 
-    await emailService.sendOTP(email, otp, 'login');
+    try {
+      await emailService.sendOTP(email, otp, 'login');
+    } catch (error) {
+      logger.error('Failed to send login OTP', { email, error });
+      throw new Error(`Login failed: Could not send verification code. ${error instanceof Error ? error.message : ''}`);
+    }
 
     await this.incrementOTPRateLimit(email);
 

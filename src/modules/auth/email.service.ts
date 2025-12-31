@@ -37,6 +37,10 @@ export class EmailService {
       });
 
       if (error) {
+        if (error.message.includes('domain') && error.message.includes('not verified')) {
+          logger.error(`[EmailService] DOMAIN VERIFICATION ERROR: Your EMAIL_FROM ("${env.EMAIL_FROM}") is not verified in Resend. FIX: Change it to "Biye <onboarding@resend.dev>" in your environment variables.`);
+          throw new Error('Email delivery failed: Domain not verified. Please use onboarding@resend.dev');
+        }
         logger.error(`[EmailService] Resend API error:`, { error });
         throw new Error(`Failed to send email: ${error.message}`);
       }
