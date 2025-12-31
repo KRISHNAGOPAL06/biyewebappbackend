@@ -1,0 +1,615 @@
+src/modules/auth/auth.controller.ts:3:10 - error TS6133: 'RegisterDTO' is declared but its value is never read.
+
+3 import { RegisterDTO, VerifyOTPDTO, LoginDTO, SelfRegistrationDTO, ParentRegistrationDTO, CandidateClaimDTO, CandidateVerifyDTO } from './auth.dto.js';
+           ~~~~~~~~~~~
+
+src/modules/auth/auth.controller.ts:6:1 - error TS6133: 'logger' is declared but its value is never read.
+
+6 import { logger } from '../../utils/logger.js';
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+src/modules/auth/auth.controller.ts:9:9 - error TS7030: Not all code paths return a value.
+
+9   async register(req: Request, res: Response, next: NextFunction) {
+          ~~~~~~~~
+
+src/modules/auth/auth.controller.ts:28:9 - error TS7030: Not all code paths return a value.
+
+28   async verify(req: Request, res: Response, next: NextFunction) {
+           ~~~~~~
+
+src/modules/auth/auth.controller.ts:54:9 - error TS7030: Not all code paths return a value.
+
+54   async login(req: Request, res: Response, next: NextFunction) {
+           ~~~~~
+
+src/modules/auth/auth.controller.ts:67:9 - error TS7030: Not all code paths return a value.
+
+67   async refresh(req: Request, res: Response, next: NextFunction) {
+           ~~~~~~~
+
+src/modules/auth/auth.controller.ts:97:9 - error TS7030: Not all code paths return a value.
+
+97   async logout(req: Request, res: Response, next: NextFunction) {
+           ~~~~~~
+
+src/modules/auth/auth.controller.ts:121:9 - error TS7030: Not all code paths return a value.
+
+121   async me(req: Request, res: Response, next: NextFunction) {
+            ~~
+
+src/modules/auth/auth.controller.ts:137:9 - error TS7030: Not all code paths return a value.
+
+137   async candidateClaim(req: Request, res: Response, next: NextFunction) {
+            ~~~~~~~~~~~~~~
+
+src/modules/auth/auth.controller.ts:149:9 - error TS7030: Not all code paths return a value.
+
+149   async candidateVerify(req: Request, res: Response, next: NextFunction) {
+            ~~~~~~~~~~~~~~~
+
+src/modules/auth/auth.routes.ts:5:10 - error TS6133: 'RegisterSchema' is declared but its value is never read.
+
+5 import { RegisterSchema, VerifyOTPSchema, LoginSchema, SelfRegistrationSchema, ParentRegistrationSchema, CandidateClaimSchema, CandidateVerifySchema } from './auth.dto.js';
+           ~~~~~~~~~~~~~~
+
+src/modules/auth/auth.routes.ts:5:56 - error TS6133: 'SelfRegistrationSchema' is declared but its value is never read.
+
+5 import { RegisterSchema, VerifyOTPSchema, LoginSchema, SelfRegistrationSchema, ParentRegistrationSchema, CandidateClaimSchema, CandidateVerifySchema } from './auth.dto.js';
+                                                         ~~~~~~~~~~~~~~~~~~~~~~
+
+src/modules/auth/auth.routes.ts:5:80 - error TS6133: 'ParentRegistrationSchema' is declared but its value is never read.
+5 import { RegisterSchema, VerifyOTPSchema, LoginSchema, SelfRegistrationSchema, ParentRegistrationSchema, CandidateClaimSchema, CandidateVerifySchema } from './auth.dto.js';
+                                                                                 ~~~~~~~~~~~~~~~~~~~~~~~~
+
+src/modules/auth/auth.service.ts:40:11 - error TS2353: Object literal may only specify known properties, and 'fullName' does not exist in type '(Without<UserUpdateInput, UserUncheckedUpdateInput> & UserUncheckedUpdateInput) | (Without<...> & UserUpdateInput)'.
+
+40           fullName: fullName || user.fullName,
+             ~~~~~~~~
+
+  node_modules/.prisma/client/index.d.ts:2927:5
+    2927     data: XOR<UserUpdateInput, UserUncheckedUpdateInput>
+             ~~~~
+    The expected type comes from property 'data' which is declared here on type '{ select?: UserSelect<DefaultArgs> | null | undefined; omit?: UserOmit<DefaultArgs> | null | undefined; include?: UserInclude<DefaultArgs> | null | undefined; data: (Without<...> & UserUncheckedUpdateInput) | (Without<...> & UserUpdateInput); where: UserWhereUniqueInput; }'
+
+src/modules/auth/auth.service.ts:40:38 - error TS2339: Property 'fullName' does not exist on type '{ email: string; phoneNumber: string | null; lookingFor: string | null; creatingFor: string | null; firstName: string | null; lastName: string | null; gender: string | null; dob: Date | null; ... 11 more ...; updatedAt: Date; }'.
+
+40           fullName: fullName || user.fullName,
+                                        ~~~~~~~~
+
+src/modules/auth/auth.service.ts:53:11 - error TS2353: Object literal may only specify known properties, and 'fullName' does not exist in type '(Without<UserCreateInput, UserUncheckedCreateInput> & UserUncheckedCreateInput) | (Without<...> & UserCreateInput)'.
+
+53           fullName,
+             ~~~~~~~~
+
+  node_modules/.prisma/client/index.d.ts:2875:5
+    2875     data: XOR<UserCreateInput, UserUncheckedCreateInput>
+             ~~~~
+    The expected type comes from property 'data' which is declared here on type '{ select?: UserSelect<DefaultArgs> | null | undefined; omit?: UserOmit<DefaultArgs> | null | undefined; include?: UserInclude<DefaultArgs> | null | undefined; data: (Without<...> & UserUncheckedCreateInput) | (Without<...> & UserCreateInput); }'
+
+src/modules/auth/auth.service.ts:112:55 - error TS2339: Property 'fullName' does not exist on type '{ email: string; phoneNumber: string | null; lookingFor: string | null; creatingFor: string | null; firstName: string | null; lastName: string | null; gender: string | null; dob: Date | null; ... 11 more ...; updatedAt: Date; }'.
+
+112       await emailService.sendWelcomeEmail(email, user.fullName || undefined);
+                                                          ~~~~~~~~
+
+src/modules/auth/auth.service.ts:169:39 - error TS6133: 'sessionInfo' is declared but its value is never read.
+
+169   async refresh(refreshToken: string, sessionInfo: SessionInfo): Promise<AuthResponse> {
+                                          ~~~~~~~~~~~
+
+src/modules/auth/auth.service.ts:331:18 - error TS6133: 'candidateFirstName' is declared but its value is never read.
+
+331       firstName: candidateFirstName,
+                     ~~~~~~~~~~~~~~~~~~
+
+src/modules/auth/auth.service.ts:332:17 - error TS6133: 'candidateLastName' is declared but its value is never read.
+
+332       lastName: candidateLastName,
+                    ~~~~~~~~~~~~~~~~~
+
+src/modules/auth/auth.service.ts:333:15 - error TS6133: 'candidateGender' is declared but its value is never read.
+
+333       gender: candidateGender,
+                  ~~~~~~~~~~~~~~~
+
+src/modules/auth/auth.service.ts:334:12 - error TS6133: 'candidateDob' is declared but its value is never read.
+
+334       dob: candidateDob,
+               ~~~~~~~~~~~~
+
+src/modules/auth/auth.service.ts:335:13 - error TS6133: 'candidateCity' is declared but its value is never read.
+
+335       city: candidateCity,
+                ~~~~~~~~~~~~~
+
+src/modules/auth/auth.service.ts:336:14 - error TS6133: 'candidateState' is declared but its value is never read.
+
+336       state: candidateState,
+                 ~~~~~~~~~~~~~~
+
+src/modules/auth/auth.service.ts:337:16 - error TS6133: 'candidateCountry' is declared but its value is never read.
+
+337       country: candidateCountry,
+                   ~~~~~~~~~~~~~~~~
+
+src/modules/auth/auth.service.ts:338:7 - error TS6133: 'lookingFor' is declared but its value is never read.
+
+338       lookingFor,
+          ~~~~~~~~~~
+
+src/modules/auth/auth.service.ts:341:7 - error TS6133: 'candidatePhone' is declared but its value is never read.
+
+341       candidatePhone,
+          ~~~~~~~~~~~~~~
+
+src/modules/auth/auth.service.ts:393:7 - error TS2322: Type '{ candidateEmail: string; }' is not assignable to type 'CandidateLinkWhereUniqueInput'.
+  Type '{ candidateEmail: string; }' is not assignable to type '{ id: string; parentUserId: string; } & { id?: string | undefined; parentUserId?: string | undefined; AND?: CandidateLinkWhereInput | CandidateLinkWhereInput[] | undefined; ... 7 more ...; parentUser?: (Without<...> & UserWhereInput) | ... 1 more ... | undefined; }'.
+    Type '{ candidateEmail: string; }' is missing the following properties from type '{ id: string; parentUserId: string; }': id, parentUserId
+
+393       where: { candidateEmail: email },
+          ~~~~~
+
+  node_modules/.prisma/client/index.d.ts:3890:5
+    3890     where: CandidateLinkWhereUniqueInput
+             ~~~~~
+    The expected type comes from property 'where' which is declared here on type '{ select?: CandidateLinkSelect<DefaultArgs> | null | undefined; omit?: CandidateLinkOmit<DefaultArgs> | null | undefined; include?: CandidateLinkInclude<...> | ... 1 more ... | undefined; where: CandidateLinkWhereUniqueInput; }'
+
+src/modules/auth/auth.service.ts:428:7 - error TS2322: Type '{ candidateEmail: string; }' is not assignable to type 'CandidateLinkWhereUniqueInput'.
+  Type '{ candidateEmail: string; }' is not assignable to type '{ id: string; parentUserId: string; } & { id?: string | undefined; parentUserId?: string | undefined; AND?: CandidateLinkWhereInput | CandidateLinkWhereInput[] | undefined; ... 7 more ...; parentUser?: (Without<...> & UserWhereInput) | ... 1 more ... | undefined; }'.
+    Type '{ candidateEmail: string; }' is missing the following properties from type '{ id: string; parentUserId: string; }': id, parentUserId
+
+428       where: { candidateEmail: email },
+          ~~~~~
+
+  node_modules/.prisma/client/index.d.ts:3890:5
+    3890     where: CandidateLinkWhereUniqueInput
+             ~~~~~
+    The expected type comes from property 'where' which is declared here on type '{ select?: CandidateLinkSelect<DefaultArgs> | null | undefined; omit?: CandidateLinkOmit<DefaultArgs> | null | undefined; include?: CandidateLinkInclude<...> | ... 1 more ... | undefined; where: CandidateLinkWhereUniqueInput; }'
+
+src/modules/auth/token.service.ts:7:40 - error TS6133: 'TokenPair' is declared but its value is never read.
+
+7 import { JWTPayload, RefreshTokenData, TokenPair } from './auth.types.js';
+                                         ~~~~~~~~~
+
+src/modules/auth/token.service.ts:20:16 - error TS2769: No overload matches this call.
+  Overload 1 of 5, '(payload: string | object | Buffer<ArrayBufferLike>, secretOrPrivateKey: null, options?: (SignOptions & { algorithm: "none"; }) | undefined): string', gave the following error.
+    Argument of type 'string' is not assignable to parameter of type 'null'.
+  Overload 2 of 5, '(payload: string | object | Buffer<ArrayBufferLike>, secretOrPrivateKey: Buffer<ArrayBufferLike> | Secret | PrivateKeyInput | JsonWebKeyInput, options?: SignOptions | undefined): string', gave the following error.
+    Type 'string' is not assignable to type 'number | StringValue | undefined'.
+  Overload 3 of 5, '(payload: string | object | Buffer<ArrayBufferLike>, secretOrPrivateKey: Buffer<ArrayBufferLike> | Secret | PrivateKeyInput | JsonWebKeyInput, callback: SignCallback): void', gave the following error.
+    Object literal may only specify known properties, and 'expiresIn' does not exist in type 'SignCallback'.
+
+20     return jwt.sign(payload, env.JWT_SECRET, {
+                  ~~~~
+
+
+src/modules/auth/token.service.ts:127:17 - error TS6133: 'detectTokenReuse' is declared but its value is never read.
+
+127   private async detectTokenReuse(refreshToken: string): Promise<void> {
+                    ~~~~~~~~~~~~~~~~
+
+src/modules/chat/chat.gateway.ts:1:24 - error TS2307: Cannot find module 'socket.io' or its corresponding type declarations.
+
+1 import { Server } from 'socket.io';
+                         ~~~~~~~~~~~
+
+src/modules/chat/chat.gateway.ts:21:40 - error TS6133: 'opts' is declared but its value is never read.
+
+21 export function attachChat(io: Server, opts?: ChatGatewayOptions): void {
+                                          ~~~~
+
+src/modules/chat/chat.gateway.ts:24:46 - error TS7006: Parameter 'next' implicitly has an 'any' type.
+
+24   io.use(async (socket: AuthenticatedSocket, next) => {
+                                                ~~~~
+
+src/modules/chat/chat.gateway.ts:26:28 - error TS2339: Property 'handshake' does not exist on type 'AuthenticatedSocket'.
+
+26       const token = socket.handshake.auth?.token;
+                              ~~~~~~~~~
+
+src/modules/chat/chat.gateway.ts:58:12 - error TS2339: Property 'join' does not exist on type 'AuthenticatedSocket'.
+
+58     socket.join(`user:${userId}`);
+              ~~~~
+
+src/modules/chat/chat.gateway.ts:59:47 - error TS2339: Property 'id' does not exist on type 'AuthenticatedSocket'.
+
+59     presenceService.markOnline(userId, socket.id);
+                                                 ~~
+
+src/modules/chat/chat.gateway.ts:61:64 - error TS2339: Property 'id' does not exist on type 'AuthenticatedSocket'.
+
+61     logger.info(`User ${userId} connected with socket ${socket.id}`);
+                                                                  ~~
+
+src/modules/chat/chat.gateway.ts:63:12 - error TS2339: Property 'on' does not exist on type 'AuthenticatedSocket'.
+
+63     socket.on('ping', () => {
+              ~~
+
+src/modules/chat/chat.gateway.ts:64:14 - error TS2339: Property 'emit' does not exist on type 'AuthenticatedSocket'.
+
+64       socket.emit('pong');
+                ~~~~
+
+src/modules/chat/chat.gateway.ts:67:12 - error TS2339: Property 'on' does not exist on type 'AuthenticatedSocket'.
+
+67     socket.on('private_message', async (payload: PrivateMessagePayload) => {
+              ~~
+
+src/modules/chat/chat.gateway.ts:69:41 - error TS2339: Property 'id' does not exist on type 'AuthenticatedSocket'.
+
+69         if (!rateLimiter.consume(socket.id)) {
+                                           ~~
+
+src/modules/chat/chat.gateway.ts:70:18 - error TS2339: Property 'emit' does not exist on type 'AuthenticatedSocket'.
+
+70           socket.emit('rate_limited');
+                    ~~~~
+
+src/modules/chat/chat.gateway.ts:71:64 - error TS2339: Property 'id' does not exist on type 'AuthenticatedSocket'.
+
+71           logger.warn(`Rate limit exceeded for socket ${socket.id}, user ${userId}`);
+                                                                  ~~
+
+src/modules/chat/chat.gateway.ts:78:18 - error TS2339: Property 'emit' does not exist on type 'AuthenticatedSocket'.
+
+78           socket.emit('error', { message: 'Message content is required', code: 'EMPTY_CONTENT' });
+                    ~~~~
+
+src/modules/chat/chat.gateway.ts:83:18 - error TS2339: Property 'emit' does not exist on type 'AuthenticatedSocket'.
+
+83           socket.emit('error', { message: 'toUserId or threadId is required', code: 'MISSING_RECIPIENT' });
+                    ~~~~
+
+src/modules/chat/chat.gateway.ts:90:20 - error TS2339: Property 'emit' does not exist on type 'AuthenticatedSocket'.
+
+90             socket.emit('error', { message: 'Thread not found or access denied', code: 'THREAD_NOT_FOUND' });
+                      ~~~~
+
+src/modules/chat/chat.gateway.ts:96:20 - error TS2339: Property 'emit' does not exist on type 'AuthenticatedSocket'.
+
+96             socket.emit('error', { message: 'Cannot create chat. Mutual match required.', code: 'NOT_ALLOWED' });
+                      ~~~~
+
+src/modules/chat/chat.gateway.ts:109:16 - error TS2339: Property 'emit' does not exist on type 'AuthenticatedSocket'.
+
+109         socket.emit('message', message);
+                   ~~~~
+
+src/modules/chat/chat.gateway.ts:114:16 - error TS2339: Property 'emit' does not exist on type 'AuthenticatedSocket'.
+
+114         socket.emit('error', { message: error.message || 'Failed to send message', code: 'MESSAGE_FAILED' });
+                   ~~~~
+
+src/modules/chat/chat.gateway.ts:118:12 - error TS2339: Property 'on' does not exist on type 'AuthenticatedSocket'.
+
+118     socket.on('disconnect', () => {
+               ~~
+
+src/modules/chat/chat.gateway.ts:119:50 - error TS2339: Property 'id' does not exist on type 'AuthenticatedSocket'.
+
+119       presenceService.markOffline(userId, socket.id);
+                                                     ~~
+
+src/modules/chat/chat.gateway.ts:120:34 - error TS2339: Property 'id' does not exist on type 'AuthenticatedSocket'.
+
+120       rateLimiter.cleanup(socket.id);
+                                     ~~
+
+src/modules/chat/chat.gateway.ts:121:65 - error TS2339: Property 'id' does not exist on type 'AuthenticatedSocket'.
+
+121       logger.info(`User ${userId} disconnected, socket ${socket.id}`);
+                                                                    ~~
+
+src/modules/chat/chat.gateway.ts:124:12 - error TS2339: Property 'on' does not exist on type 'AuthenticatedSocket'.
+
+124     socket.on('error', (error) => {
+               ~~
+
+src/modules/chat/chat.gateway.ts:124:25 - error TS7006: Parameter 'error' implicitly has an 'any' type.
+
+124     socket.on('error', (error) => {
+                            ~~~~~
+
+src/modules/chat/chat.service.ts:308:61 - error TS7006: Parameter 'p' implicitly has an 'any' type.
+
+308       const otherParticipants = thread.participants.filter((p) => p !== userId);
+                                                                ~
+
+src/modules/chat/chat.service.ts:309:34 - error TS7006: Parameter 'participantId' implicitly has an 'any' type.
+
+309       otherParticipants.forEach((participantId) => {
+                                     ~~~~~~~~~~~~~
+
+src/modules/chat/chat.types.ts:1:32 - error TS2307: Cannot find module 'socket.io' or its corresponding type declarations.
+
+1 import { Server, Socket } from 'socket.io';
+                                 ~~~~~~~~~~~
+
+src/modules/connections/connections.controller.ts:9:9 - error TS7030: Not all code paths return a value.
+
+9   async sendInterest(req: Request, res: Response, next: NextFunction) {
+          ~~~~~~~~~~~~
+
+src/modules/connections/connections.controller.ts:48:9 - error TS7030: Not all code paths return a value.
+
+48   async acceptInterest(req: Request, res: Response, next: NextFunction) {
+           ~~~~~~~~~~~~~~
+
+src/modules/connections/connections.controller.ts:87:9 - error TS7030: Not all code paths return a value.
+
+87   async declineInterest(req: Request, res: Response, next: NextFunction) {
+           ~~~~~~~~~~~~~~~
+
+src/modules/connections/connections.controller.ts:126:9 - error TS7030: Not all code paths return a value.
+
+126   async withdrawInterest(req: Request, res: Response, next: NextFunction) {
+            ~~~~~~~~~~~~~~~~
+
+src/modules/connections/connections.controller.ts:165:9 - error TS7030: Not all code paths return a value.
+
+165   async getSentInterests(req: Request, res: Response, next: NextFunction) {
+            ~~~~~~~~~~~~~~~~
+
+src/modules/connections/connections.controller.ts:179:9 - error TS7030: Not all code paths return a value.
+
+179   async getReceivedInterests(req: Request, res: Response, next: NextFunction) {
+            ~~~~~~~~~~~~~~~~~~~~
+
+src/modules/connections/connections.controller.ts:193:9 - error TS7030: Not all code paths return a value.
+
+193   async getMatches(req: Request, res: Response, next: NextFunction) {
+            ~~~~~~~~~~
+
+src/modules/connections/connections.service.ts:318:11 - error TS6133: 'receivedAccepted' is declared but its value is never read.
+
+318     const receivedAccepted = await prisma.interest.findMany({
+              ~~~~~~~~~~~~~~~~
+
+src/modules/connections/idempotency.service.ts:17:11 - error TS6133: 'hashResponse' is declared but its value is never read.
+
+17   private hashResponse(response: any): string {
+             ~~~~~~~~~~~~
+
+src/modules/discovery/discovery.controller.ts:7:9 - error TS7030: Not all code paths return a value.
+
+7   async getRecommended(req: Request, res: Response, next: NextFunction) {
+          ~~~~~~~~~~~~~~
+
+src/modules/discovery/discovery.controller.ts:28:9 - error TS7030: Not all code paths return a value.
+
+28   async getNewToday(req: Request, res: Response, next: NextFunction) {
+           ~~~~~~~~~~~
+
+src/modules/discovery/discovery.controller.ts:49:9 - error TS7030: Not all code paths return a value.
+
+49   async getNearby(req: Request, res: Response, next: NextFunction) {
+           ~~~~~~~~~
+
+src/modules/media/cloudinary.service.ts:22:31 - error TS6133: 'maxBytes' is declared but its value is never read.
+
+22     const { publicId, folder, maxBytes } = params;
+                                 ~~~~~~~~
+
+src/modules/media/local/local.storage.service.ts:3:1 - error TS6133: 'env' is declared but its value is never read.
+
+3 import { env } from '../../../config/env.js';
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+src/modules/media/media.controller.ts:8:9 - error TS7030: Not all code paths return a value.
+
+8   async createUploadUrl(req: Request, res: Response, next: NextFunction) {
+          ~~~~~~~~~~~~~~~
+
+src/modules/media/media.controller.ts:26:9 - error TS7030: Not all code paths return a value.
+
+26   async uploadFile(req: Request, res: Response, next: NextFunction) {
+           ~~~~~~~~~~
+
+src/modules/media/media.controller.ts:38:9 - error TS7030: Not all code paths return a value.
+
+38   async getPhotoById(req: Request, res: Response, next: NextFunction) {
+           ~~~~~~~~~~~~
+
+src/modules/media/media.controller.ts:61:9 - error TS7030: Not all code paths return a value.
+
+61   async deletePhoto(req: Request, res: Response, next: NextFunction) {
+           ~~~~~~~~~~~
+
+src/modules/media/media.controller.ts:74:9 - error TS7030: Not all code paths return a value.
+
+74   async listProfilePhotos(req: Request, res: Response, next: NextFunction) {
+           ~~~~~~~~~~~~~~~~~
+
+src/modules/media/media.service.ts:85:5 - error TS2322: Type 'PhotoMetadata | null' is not assignable to type 'PhotoMetadata'.
+  Type 'null' is not assignable to type 'PhotoMetadata'.
+
+85     return this.getPhotoById(photoId);
+       ~~~~~~
+
+src/modules/media/moderation.controller.ts:8:9 - error TS7030: Not all code paths return a value.
+
+8   async handleCallback(req: Request, res: Response, next: NextFunction) {
+          ~~~~~~~~~~~~~~
+
+src/modules/media/s3.service.ts:17:26 - error TS6133: 'contentType' is declared but its value is never read.
+
+17     const { bucket, key, contentType, expiresSeconds } = params;
+                            ~~~~~~~~~~~
+
+src/modules/profile/completeness.service.ts:109:11 - error TS6133: 'required' is declared but its value is never read.
+
+109     const required = ['displayName', 'gender', 'dob', 'location', 'about', 'headline'];
+              ~~~~~~~~
+
+src/modules/profile/profile.controller.ts:7:1 - error TS6133: 'logger' is declared but its value is never read.
+
+7 import { logger } from '../../utils/logger.js';
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+src/modules/profile/profile.controller.ts:10:9 - error TS7030: Not all code paths return a value.
+
+10   async createProfile(req: Request, res: Response, next: NextFunction) {
+           ~~~~~~~~~~~~~
+
+src/modules/profile/profile.controller.ts:23:9 - error TS7030: Not all code paths return a value.
+
+23   async getMyProfile(req: Request, res: Response, next: NextFunction) {
+           ~~~~~~~~~~~~
+
+src/modules/profile/profile.controller.ts:39:9 - error TS7030: Not all code paths return a value.
+
+39   async getProfileById(req: Request, res: Response, next: NextFunction) {
+           ~~~~~~~~~~~~~~
+
+src/modules/profile/profile.controller.ts:61:9 - error TS7030: Not all code paths return a value.
+
+61   async updateProfileStep(req: Request, res: Response, next: NextFunction) {
+           ~~~~~~~~~~~~~~~~~
+
+src/modules/profile/profile.controller.ts:75:9 - error TS7030: Not all code paths return a value.
+
+75   async publishProfile(req: Request, res: Response, next: NextFunction) {
+           ~~~~~~~~~~~~~~
+
+src/modules/profile/profile.controller.ts:88:9 - error TS7030: Not all code paths return a value.
+
+88   async unpublishProfile(req: Request, res: Response, next: NextFunction) {
+           ~~~~~~~~~~~~~~~~
+
+src/modules/profile/profile.controller.ts:101:9 - error TS7030: Not all code paths return a value.
+
+101   async deleteProfile(req: Request, res: Response, next: NextFunction) {
+            ~~~~~~~~~~~~~
+
+src/modules/profile/profile.permissions.ts:14:7 - error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+
+14       displayName: profile.displayName,
+         ~~~~~~~~~~~
+
+  src/modules/profile/profile.types.ts:44:3
+    44   displayName: string;
+         ~~~~~~~~~~~
+    The expected type comes from property 'displayName' which is declared here on type 'MaskedProfile'
+
+src/modules/profile/profile.routes.ts:27:12 - error TS2345: Argument of type 'ZodDiscriminatedUnion<"step", [ZodObject<{ step: ZodLiteral<"about">; data: ZodObject<{ about: ZodString; headline: ZodOptional<ZodString>; }, "strip", ZodTypeAny, { ...; }, { ...; }>; }, "strip", ZodTypeAny, { ...; }, { ...; }>, ... 10 more ..., ZodObject<...>]>' is not assignable to parameter of type 'AnyZodObject'.
+  Type 'ZodDiscriminatedUnion<"step", [ZodObject<{ step: ZodLiteral<"about">; data: ZodObject<{ about: ZodString; headline: ZodOptional<ZodString>; }, "strip", ZodTypeAny, { ...; }, { ...; }>; }, "strip", ZodTypeAny, { ...; }, { ...; }>, ... 10 more ..., ZodObject<...>]>' is missing the following properties from type 'ZodObject<any, any, any, { [x: string]: any; }, { [x: string]: any; }>': _cached, _getCached, shape, strict, and 14 more.
+
+27   validate(StepUpdateSchema),
+              ~~~~~~~~~~~~~~~~
+
+src/modules/profile/profile.service.ts:6:3 - error TS6133: 'UpdatePhotosMetadataStepDTO' is declared but its value is never read.
+
+6   UpdatePhotosMetadataStepDTO,
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+src/modules/profile/profile.service.ts:7:3 - error TS6133: 'UpdatePreferencesStepDTO' is declared but its value is never read.
+
+7   UpdatePreferencesStepDTO,
+    ~~~~~~~~~~~~~~~~~~~~~~~~
+
+src/modules/profile/profile.service.ts:228:15 - error TS2322: Type '{ ageRange: { max: number; min: number; }; maritalStatus?: string[] | undefined; heightRange?: { max: number; min: number; } | undefined; } | JsonValue' is not assignable to type 'NullableJsonNullValueInput | InputJsonValue | undefined'.
+  Type 'null' is not assignable to type 'NullableJsonNullValueInput | InputJsonValue | undefined'.
+
+228               basic: stepData.data.preferences.basic || existingPreferences.basic,
+                  ~~~~~
+
+  node_modules/.prisma/client/index.d.ts:15898:5
+    15898     basic?: NullableJsonNullValueInput | InputJsonValue
+              ~~~~~
+    The expected type comes from property 'basic' which is declared here on type '(Without<PreferenceUpdateInput, PreferenceUncheckedUpdateInput> & PreferenceUncheckedUpdateInput) | (Without<...> & PreferenceUpdateInput)'
+
+src/modules/profile/profile.service.ts:229:15 - error TS2322: Type '{ diet?: string[] | undefined; drinking?: string[] | undefined; smoking?: string[] | undefined; } | JsonValue' is not assignable to type 'NullableJsonNullValueInput | InputJsonValue | undefined'.
+  Type 'null' is not assignable to type 'NullableJsonNullValueInput | InputJsonValue | undefined'.
+
+229               lifestyle: stepData.data.preferences.lifestyle || existingPreferences.lifestyle,
+                  ~~~~~~~~~
+
+  node_modules/.prisma/client/index.d.ts:15899:5
+    15899     lifestyle?: NullableJsonNullValueInput | InputJsonValue
+              ~~~~~~~~~
+    The expected type comes from property 'lifestyle' which is declared here on type '(Without<PreferenceUpdateInput, PreferenceUncheckedUpdateInput> & PreferenceUncheckedUpdateInput) | (Without<...> & PreferenceUpdateInput)'
+
+src/modules/profile/profile.service.ts:230:15 - error TS2322: Type '{ minEducation?: string | undefined; fieldOfStudy?: string[] | undefined; } | JsonValue' is not assignable to type 'NullableJsonNullValueInput | InputJsonValue | undefined'.
+  Type 'null' is not assignable to type 'NullableJsonNullValueInput | InputJsonValue | undefined'.
+
+230               education: stepData.data.preferences.education || existingPreferences.education,
+                  ~~~~~~~~~
+
+  node_modules/.prisma/client/index.d.ts:15900:5
+    15900     education?: NullableJsonNullValueInput | InputJsonValue
+              ~~~~~~~~~
+    The expected type comes from property 'education' which is declared here on type '(Without<PreferenceUpdateInput, PreferenceUncheckedUpdateInput> & PreferenceUncheckedUpdateInput) | (Without<...> & PreferenceUpdateInput)'
+
+src/modules/profile/profile.service.ts:231:15 - error TS2322: Type '{ religion?: string[] | undefined; caste?: string[] | undefined; motherTongue?: string[] | undefined; } | JsonValue' is not assignable to type 'NullableJsonNullValueInput | InputJsonValue | undefined'.
+  Type 'null' is not assignable to type 'NullableJsonNullValueInput | InputJsonValue | undefined'.
+
+231               community: stepData.data.preferences.community || existingPreferences.community,
+                  ~~~~~~~~~
+
+  node_modules/.prisma/client/index.d.ts:15901:5
+    15901     community?: NullableJsonNullValueInput | InputJsonValue
+              ~~~~~~~~~
+    The expected type comes from property 'community' which is declared here on type '(Without<PreferenceUpdateInput, PreferenceUncheckedUpdateInput> & PreferenceUncheckedUpdateInput) | (Without<...> & PreferenceUpdateInput)'
+
+src/modules/profile/profile.service.ts:232:15 - error TS2322: Type '{ cities?: string[] | undefined; countries?: string[] | undefined; willingToRelocate?: boolean | undefined; } | JsonValue' is not assignable to type 'NullableJsonNullValueInput | InputJsonValue | undefined'.
+  Type 'null' is not assignable to type 'NullableJsonNullValueInput | InputJsonValue | undefined'.
+
+232               location: stepData.data.preferences.location || existingPreferences.location,
+                  ~~~~~~~~
+
+  node_modules/.prisma/client/index.d.ts:15902:5
+    15902     location?: NullableJsonNullValueInput | InputJsonValue
+              ~~~~~~~~
+    The expected type comes from property 'location' which is declared here on type '(Without<PreferenceUpdateInput, PreferenceUncheckedUpdateInput> & PreferenceUncheckedUpdateInput) | (Without<...> & PreferenceUpdateInput)'
+
+src/modules/search/search.controller.ts:9:9 - error TS7030: Not all code paths return a value.
+
+9   async search(req: Request, res: Response, next: NextFunction) {
+          ~~~~~~
+
+src/modules/search/search.controller.ts:30:9 - error TS7030: Not all code paths return a value.
+
+30   async saveSearch(req: Request, res: Response, next: NextFunction) {
+           ~~~~~~~~~~
+
+src/modules/search/search.controller.ts:43:9 - error TS7030: Not all code paths return a value.
+
+43   async getSavedSearches(req: Request, res: Response, next: NextFunction) {
+           ~~~~~~~~~~~~~~~~
+
+src/modules/search/search.controller.ts:55:9 - error TS7030: Not all code paths return a value.
+
+55   async deleteSavedSearch(req: Request, res: Response, next: NextFunction) {
+           ~~~~~~~~~~~~~~~~~
+
+
+Found 104 errors in 23 files.
+
+Errors  Files
+    10  src/modules/auth/auth.controller.ts:3
+     3  src/modules/auth/auth.routes.ts:5
+    16  src/modules/auth/auth.service.ts:40
+     3  src/modules/auth/token.service.ts:7
+    25  src/modules/chat/chat.gateway.ts:1
+     2  src/modules/chat/chat.service.ts:308
+     1  src/modules/chat/chat.types.ts:1
+     7  src/modules/connections/connections.controller.ts:9
+     1  src/modules/connections/connections.service.ts:318
+     1  src/modules/connections/idempotency.service.ts:17
+     3  src/modules/discovery/discovery.controller.ts:7
+     1  src/modules/media/cloudinary.service.ts:22
+     1  src/modules/media/local/local.storage.service.ts:3
+     5  src/modules/media/media.controller.ts:8
+     1  src/modules/media/media.service.ts:85
+     1  src/modules/media/moderation.controller.ts:8
+     1  src/modules/media/s3.service.ts:17
+     1  src/modules/profile/completeness.service.ts:109
+     8  src/modules/profile/profile.controller.ts:7
+     1  src/modules/profile/profile.permissions.ts:14
+     1  src/modules/profile/profile.routes.ts:27
+     7  src/modules/profile/profile.service.ts:6
+     4  src/modules/search/search.controller.ts:9

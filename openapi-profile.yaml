@@ -1,0 +1,644 @@
+openapi: 3.0.3
+info:
+  title: Biye Matrimonial - Profile API
+  description: Profile management API for matrimonial platform with draft/publish workflow
+  version: 1.0.0
+  contact:
+    name: Biye API Support
+
+servers:
+  - url: http://localhost:3000/api/v1
+    description: Development server
+  - url: https://api.biye.com/api/v1
+    description: Production server
+
+tags:
+  - name: Profiles
+    description: Profile management operations
+
+paths:
+  /profiles:
+    post:
+      tags:
+        - Profiles
+      summary: Create new profile
+      description: Create a new profile draft for the authenticated user
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - displayName
+              properties:
+                displayName:
+                  type: string
+                  minLength: 2
+                  example: John Doe
+                headline:
+                  type: string
+                  example: Software Engineer from NYC
+                about:
+                  type: string
+                  example: I am a passionate developer...
+      responses:
+        '201':
+          description: Profile created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: Profile already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /profiles/me:
+    get:
+      tags:
+        - Profiles
+      summary: Get my profile
+      description: Retrieve the authenticated user's profile
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileResponse'
+        '404':
+          description: Profile not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /profiles/{id}:
+    get:
+      tags:
+        - Profiles
+      summary: Get profile by ID
+      description: Retrieve a profile by ID (masked based on viewer permissions)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MaskedProfileResponse'
+        '403':
+          description: Profile is not published
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    delete:
+      tags:
+        - Profiles
+      summary: Delete profile
+      description: Soft delete the profile (owner only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Profile deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '403':
+          description: Not authorized to delete this profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /profiles/{id}/step:
+    patch:
+      tags:
+        - Profiles
+      summary: Update profile step
+      description: Update a specific step in the profile wizard (owner only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/AboutStepUpdate'
+                - $ref: '#/components/schemas/DemographicsStepUpdate'
+                - $ref: '#/components/schemas/FamilyStepUpdate'
+                - $ref: '#/components/schemas/LifestyleStepUpdate'
+                - $ref: '#/components/schemas/LocationStepUpdate'
+                - $ref: '#/components/schemas/PhotosMetadataStepUpdate'
+                - $ref: '#/components/schemas/PreferencesStepUpdate'
+              discriminator:
+                propertyName: step
+      responses:
+        '200':
+          description: Profile step updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          description: Not authorized to update this profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /profiles/{id}/publish:
+    post:
+      tags:
+        - Profiles
+      summary: Publish profile
+      description: Publish the profile (makes it visible to others). Requires all mandatory fields.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Profile published successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileResponse'
+        '400':
+          description: Profile incomplete - missing required fields
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+                        example: 'Profile cannot be published. Missing required fields: gender, dob, location'
+        '403':
+          description: Not authorized to publish this profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /profiles/{id}/unpublish:
+    post:
+      tags:
+        - Profiles
+      summary: Unpublish profile
+      description: Unpublish the profile (hides it from others)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Profile unpublished successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileResponse'
+        '403':
+          description: Not authorized to unpublish this profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Profile:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        displayName:
+          type: string
+        headline:
+          type: string
+        about:
+          type: string
+        gender:
+          type: string
+          enum: [male, female, other]
+        dob:
+          type: string
+          format: date
+        location:
+          type: object
+          properties:
+            city:
+              type: string
+            state:
+              type: string
+            country:
+              type: string
+            coordinates:
+              type: object
+              properties:
+                lat:
+                  type: number
+                lng:
+                  type: number
+        published:
+          type: boolean
+        completeness:
+          type: integer
+          minimum: 0
+          maximum: 100
+        photos:
+          type: array
+          items:
+            $ref: '#/components/schemas/Photo'
+        preferences:
+          $ref: '#/components/schemas/Preference'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Photo:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        profileId:
+          type: string
+          format: uuid
+        objectKey:
+          type: string
+        url:
+          type: string
+          format: uri
+        fileSize:
+          type: integer
+        privacyLevel:
+          type: string
+          enum: [public, private, on_request]
+          default: public
+        moderationStatus:
+          type: string
+          enum: [pending, approved, rejected]
+          default: pending
+        createdAt:
+          type: string
+          format: date-time
+
+    Preference:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        profileId:
+          type: string
+          format: uuid
+        basic:
+          type: object
+        lifestyle:
+          type: object
+        education:
+          type: object
+        community:
+          type: object
+        location:
+          type: object
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    AboutStepUpdate:
+      type: object
+      required:
+        - step
+        - data
+      properties:
+        step:
+          type: string
+          enum: [about]
+        data:
+          type: object
+          required:
+            - about
+          properties:
+            about:
+              type: string
+              minLength: 50
+            headline:
+              type: string
+              minLength: 10
+
+    DemographicsStepUpdate:
+      type: object
+      required:
+        - step
+        - data
+      properties:
+        step:
+          type: string
+          enum: [demographics]
+        data:
+          type: object
+          required:
+            - gender
+            - dob
+          properties:
+            gender:
+              type: string
+              enum: [male, female, other]
+            dob:
+              type: string
+              format: date
+
+    FamilyStepUpdate:
+      type: object
+      required:
+        - step
+        - data
+      properties:
+        step:
+          type: string
+          enum: [family]
+        data:
+          type: object
+          properties:
+            familyDetails:
+              type: object
+
+    LifestyleStepUpdate:
+      type: object
+      required:
+        - step
+        - data
+      properties:
+        step:
+          type: string
+          enum: [lifestyle]
+        data:
+          type: object
+          properties:
+            lifestyle:
+              type: object
+
+    LocationStepUpdate:
+      type: object
+      required:
+        - step
+        - data
+      properties:
+        step:
+          type: string
+          enum: [location]
+        data:
+          type: object
+          required:
+            - location
+          properties:
+            location:
+              type: object
+              required:
+                - city
+                - state
+                - country
+              properties:
+                city:
+                  type: string
+                state:
+                  type: string
+                country:
+                  type: string
+
+    PhotosMetadataStepUpdate:
+      type: object
+      required:
+        - step
+        - data
+      properties:
+        step:
+          type: string
+          enum: [photos-metadata]
+        data:
+          type: object
+          required:
+            - photos
+          properties:
+            photos:
+              type: array
+              items:
+                type: object
+                required:
+                  - objectKey
+                  - url
+                  - fileSize
+                properties:
+                  objectKey:
+                    type: string
+                  url:
+                    type: string
+                    format: uri
+                  fileSize:
+                    type: integer
+                  privacyLevel:
+                    type: string
+                    enum: [public, private, on_request]
+
+    PreferencesStepUpdate:
+      type: object
+      required:
+        - step
+        - data
+      properties:
+        step:
+          type: string
+          enum: [preferences]
+        data:
+          type: object
+          properties:
+            preferences:
+              type: object
+
+    ProfileResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/Profile'
+        message:
+          type: string
+
+    MaskedProfileResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            displayName:
+              type: string
+            headline:
+              type: string
+            about:
+              type: string
+              description: May be truncated for non-premium users
+            gender:
+              type: string
+            age:
+              type: integer
+            location:
+              type: object
+              description: Coordinates removed for privacy
+            completeness:
+              type: integer
+            photos:
+              type: array
+              items:
+                $ref: '#/components/schemas/Photo'
+              description: Only public photos shown to non-premium users
+
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          properties:
+            message:
+              type: string
+            code:
+              type: string
+            details:
+              type: object
+
+  responses:
+    BadRequest:
+      description: Bad request - validation error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Unauthorized:
+      description: Unauthorized - invalid or missing token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'

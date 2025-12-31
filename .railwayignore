@@ -1,0 +1,26 @@
+node_modules/
+.git/
+.vscode/
+.idea/
+*.log
+coverage/
+.nyc_output/
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.env
+.env.local
+.env.*.local
+uploads/
+.local/
+dist/
+*.tsbuildinfo
+attached_assets/
+New folder.zip
+*.txt
+*.md
+!README.md
+!package.json
+!package-lock.json

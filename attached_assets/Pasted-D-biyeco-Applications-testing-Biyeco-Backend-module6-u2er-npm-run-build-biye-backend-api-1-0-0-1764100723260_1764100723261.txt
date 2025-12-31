@@ -1,0 +1,294 @@
+D:\biyeco\Applications\testing\Biyeco-Backend-module6-u2er>npm run build
+
+> biye-backend-api@1.0.0 build
+> tsc
+
+src/modules/chat/chat.service.ts:308:61 - error TS7006: Parameter 'p' implicitly has an 'any' type.
+
+308       const otherParticipants = thread.participants.filter((p) => p !== userId);
+                                                                ~
+
+src/modules/chat/chat.service.ts:309:34 - error TS7006: Parameter 'participantId' implicitly has an 'any' type.
+
+309       otherParticipants.forEach((participantId) => {
+                                     ~~~~~~~~~~~~~
+
+src/modules/connections/connections.controller.ts:9:9 - error TS7030: Not all code paths return a value.
+
+9   async sendInterest(req: Request, res: Response, next: NextFunction) {
+          ~~~~~~~~~~~~
+
+src/modules/connections/connections.controller.ts:48:9 - error TS7030: Not all code paths return a value.
+
+48   async acceptInterest(req: Request, res: Response, next: NextFunction) {
+           ~~~~~~~~~~~~~~
+
+src/modules/connections/connections.controller.ts:87:9 - error TS7030: Not all code paths return a value.
+
+87   async declineInterest(req: Request, res: Response, next: NextFunction) {
+           ~~~~~~~~~~~~~~~
+
+src/modules/connections/connections.controller.ts:126:9 - error TS7030: Not all code paths return a value.
+
+126   async withdrawInterest(req: Request, res: Response, next: NextFunction) {
+            ~~~~~~~~~~~~~~~~
+
+src/modules/connections/connections.controller.ts:165:9 - error TS7030: Not all code paths return a value.
+
+165   async getSentInterests(req: Request, res: Response, next: NextFunction) {
+            ~~~~~~~~~~~~~~~~
+
+src/modules/connections/connections.controller.ts:179:9 - error TS7030: Not all code paths return a value.
+
+179   async getReceivedInterests(req: Request, res: Response, next: NextFunction) {
+            ~~~~~~~~~~~~~~~~~~~~
+
+src/modules/connections/connections.controller.ts:193:9 - error TS7030: Not all code paths return a value.
+
+193   async getMatches(req: Request, res: Response, next: NextFunction) {
+            ~~~~~~~~~~
+
+src/modules/connections/connections.service.ts:318:11 - error TS6133: 'receivedAccepted' is declared but its value is never read.
+
+318     const receivedAccepted = await prisma.interest.findMany({
+              ~~~~~~~~~~~~~~~~
+
+src/modules/connections/idempotency.service.ts:17:11 - error TS6133: 'hashResponse' is declared but its value is never read.
+
+17   private hashResponse(response: any): string {
+             ~~~~~~~~~~~~
+
+src/modules/discovery/discovery.controller.ts:7:9 - error TS7030: Not all code paths return a value.
+
+7   async getRecommended(req: Request, res: Response, next: NextFunction) {
+          ~~~~~~~~~~~~~~
+
+src/modules/discovery/discovery.controller.ts:28:9 - error TS7030: Not all code paths return a value.
+
+28   async getNewToday(req: Request, res: Response, next: NextFunction) {
+           ~~~~~~~~~~~
+
+src/modules/discovery/discovery.controller.ts:49:9 - error TS7030: Not all code paths return a value.
+
+49   async getNearby(req: Request, res: Response, next: NextFunction) {
+           ~~~~~~~~~
+
+src/modules/media/cloudinary.service.ts:22:31 - error TS6133: 'maxBytes' is declared but its value is never read.
+
+22     const { publicId, folder, maxBytes } = params;
+                                 ~~~~~~~~
+
+src/modules/media/local/local.storage.service.ts:3:1 - error TS6133: 'env' is declared but its value is never read.
+
+3 import { env } from '../../../config/env.js';
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+src/modules/media/media.controller.ts:8:9 - error TS7030: Not all code paths return a value.
+
+8   async createUploadUrl(req: Request, res: Response, next: NextFunction) {
+          ~~~~~~~~~~~~~~~
+
+src/modules/media/media.controller.ts:26:9 - error TS7030: Not all code paths return a value.
+
+26   async uploadFile(req: Request, res: Response, next: NextFunction) {
+           ~~~~~~~~~~
+
+src/modules/media/media.controller.ts:38:9 - error TS7030: Not all code paths return a value.
+
+38   async getPhotoById(req: Request, res: Response, next: NextFunction) {
+           ~~~~~~~~~~~~
+
+src/modules/media/media.controller.ts:61:9 - error TS7030: Not all code paths return a value.
+
+61   async deletePhoto(req: Request, res: Response, next: NextFunction) {
+           ~~~~~~~~~~~
+
+src/modules/media/media.controller.ts:74:9 - error TS7030: Not all code paths return a value.
+
+74   async listProfilePhotos(req: Request, res: Response, next: NextFunction) {
+           ~~~~~~~~~~~~~~~~~
+
+src/modules/media/media.service.ts:85:5 - error TS2322: Type 'PhotoMetadata | null' is not assignable to type 'PhotoMetadata'.
+  Type 'null' is not assignable to type 'PhotoMetadata'.
+
+85     return this.getPhotoById(photoId);
+       ~~~~~~
+
+src/modules/media/moderation.controller.ts:8:9 - error TS7030: Not all code paths return a value.
+
+8   async handleCallback(req: Request, res: Response, next: NextFunction) {
+          ~~~~~~~~~~~~~~
+
+src/modules/media/s3.service.ts:17:26 - error TS6133: 'contentType' is declared but its value is never read.
+
+17     const { bucket, key, contentType, expiresSeconds } = params;
+                            ~~~~~~~~~~~
+
+src/modules/profile/completeness.service.ts:109:11 - error TS6133: 'required' is declared but its value is never read.
+
+109     const required = ['displayName', 'gender', 'dob', 'location', 'about', 'headline'];
+              ~~~~~~~~
+
+src/modules/profile/profile.controller.ts:7:1 - error TS6133: 'logger' is declared but its value is never read.
+
+7 import { logger } from '../../utils/logger.js';
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+src/modules/profile/profile.controller.ts:10:9 - error TS7030: Not all code paths return a value.
+
+10   async createProfile(req: Request, res: Response, next: NextFunction) {
+           ~~~~~~~~~~~~~
+
+src/modules/profile/profile.controller.ts:23:9 - error TS7030: Not all code paths return a value.
+
+23   async getMyProfile(req: Request, res: Response, next: NextFunction) {
+           ~~~~~~~~~~~~
+
+src/modules/profile/profile.controller.ts:39:9 - error TS7030: Not all code paths return a value.
+
+39   async getProfileById(req: Request, res: Response, next: NextFunction) {
+           ~~~~~~~~~~~~~~
+
+src/modules/profile/profile.controller.ts:61:9 - error TS7030: Not all code paths return a value.
+
+61   async updateProfileStep(req: Request, res: Response, next: NextFunction) {
+           ~~~~~~~~~~~~~~~~~
+
+src/modules/profile/profile.controller.ts:75:9 - error TS7030: Not all code paths return a value.
+
+75   async publishProfile(req: Request, res: Response, next: NextFunction) {
+           ~~~~~~~~~~~~~~
+
+src/modules/profile/profile.controller.ts:88:9 - error TS7030: Not all code paths return a value.
+
+88   async unpublishProfile(req: Request, res: Response, next: NextFunction) {
+           ~~~~~~~~~~~~~~~~
+
+src/modules/profile/profile.controller.ts:101:9 - error TS7030: Not all code paths return a value.
+
+101   async deleteProfile(req: Request, res: Response, next: NextFunction) {
+            ~~~~~~~~~~~~~
+
+src/modules/profile/profile.permissions.ts:14:7 - error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+
+14       displayName: profile.displayName,
+         ~~~~~~~~~~~
+
+  src/modules/profile/profile.types.ts:44:3
+    44   displayName: string;
+         ~~~~~~~~~~~
+    The expected type comes from property 'displayName' which is declared here on type 'MaskedProfile'
+
+src/modules/profile/profile.routes.ts:27:12 - error TS2345: Argument of type 'ZodDiscriminatedUnion<"step", [ZodObject<{ step: ZodLiteral<"about">; data: ZodObject<{ about: ZodString; headline: ZodOptional<ZodString>; }, "strip", ZodTypeAny, { ...; }, { ...; }>; }, "strip", ZodTypeAny, { ...; }, { ...; }>, ... 10 more ..., ZodObject<...>]>' is not assignable to parameter of type 'AnyZodObject'.
+  Type 'ZodDiscriminatedUnion<"step", [ZodObject<{ step: ZodLiteral<"about">; data: ZodObject<{ about: ZodString; headline: ZodOptional<ZodString>; }, "strip", ZodTypeAny, { ...; }, { ...; }>; }, "strip", ZodTypeAny, { ...; }, { ...; }>, ... 10 more ..., ZodObject<...>]>' is missing the following properties from type 'ZodObject<any, any, any, { [x: string]: any; }, { [x: string]: any; }>': _cached, _getCached, shape, strict, and 14 more.
+
+27   validate(StepUpdateSchema),
+              ~~~~~~~~~~~~~~~~
+
+src/modules/profile/profile.service.ts:6:3 - error TS6133: 'UpdatePhotosMetadataStepDTO' is declared but its value is never read.
+
+6   UpdatePhotosMetadataStepDTO,
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+src/modules/profile/profile.service.ts:7:3 - error TS6133: 'UpdatePreferencesStepDTO' is declared but its value is never read.
+
+7   UpdatePreferencesStepDTO,
+    ~~~~~~~~~~~~~~~~~~~~~~~~
+
+src/modules/profile/profile.service.ts:228:15 - error TS2322: Type '{ ageRange: { max: number; min: number; }; maritalStatus?: string[] | undefined; heightRange?: { max: number; min: number; } | undefined; } | JsonValue' is not assignable to type 'NullableJsonNullValueInput | InputJsonValue | undefined'.
+  Type 'null' is not assignable to type 'NullableJsonNullValueInput | InputJsonValue | undefined'.
+
+228               basic: stepData.data.preferences.basic || existingPreferences.basic,
+                  ~~~~~
+
+  node_modules/.prisma/client/index.d.ts:15898:5
+    15898     basic?: NullableJsonNullValueInput | InputJsonValue
+              ~~~~~
+    The expected type comes from property 'basic' which is declared here on type '(Without<PreferenceUpdateInput, PreferenceUncheckedUpdateInput> & PreferenceUncheckedUpdateInput) | (Without<...> & PreferenceUpdateInput)'
+
+src/modules/profile/profile.service.ts:229:15 - error TS2322: Type '{ diet?: string[] | undefined; drinking?: string[] | undefined; smoking?: string[] | undefined; } | JsonValue' is not assignable to type 'NullableJsonNullValueInput | InputJsonValue | undefined'.
+  Type 'null' is not assignable to type 'NullableJsonNullValueInput | InputJsonValue | undefined'.
+
+229               lifestyle: stepData.data.preferences.lifestyle || existingPreferences.lifestyle,
+                  ~~~~~~~~~
+
+  node_modules/.prisma/client/index.d.ts:15899:5
+    15899     lifestyle?: NullableJsonNullValueInput | InputJsonValue
+              ~~~~~~~~~
+    The expected type comes from property 'lifestyle' which is declared here on type '(Without<PreferenceUpdateInput, PreferenceUncheckedUpdateInput> & PreferenceUncheckedUpdateInput) | (Without<...> & PreferenceUpdateInput)'
+
+src/modules/profile/profile.service.ts:230:15 - error TS2322: Type '{ minEducation?: string | undefined; fieldOfStudy?: string[] | undefined; } | JsonValue' is not assignable to type 'NullableJsonNullValueInput | InputJsonValue | undefined'.
+  Type 'null' is not assignable to type 'NullableJsonNullValueInput | InputJsonValue | undefined'.
+
+230               education: stepData.data.preferences.education || existingPreferences.education,
+                  ~~~~~~~~~
+
+  node_modules/.prisma/client/index.d.ts:15900:5
+    15900     education?: NullableJsonNullValueInput | InputJsonValue
+              ~~~~~~~~~
+    The expected type comes from property 'education' which is declared here on type '(Without<PreferenceUpdateInput, PreferenceUncheckedUpdateInput> & PreferenceUncheckedUpdateInput) | (Without<...> & PreferenceUpdateInput)'
+
+src/modules/profile/profile.service.ts:231:15 - error TS2322: Type '{ religion?: string[] | undefined; caste?: string[] | undefined; motherTongue?: string[] | undefined; } | JsonValue' is not assignable to type 'NullableJsonNullValueInput | InputJsonValue | undefined'.
+  Type 'null' is not assignable to type 'NullableJsonNullValueInput | InputJsonValue | undefined'.
+
+231               community: stepData.data.preferences.community || existingPreferences.community,
+                  ~~~~~~~~~
+
+  node_modules/.prisma/client/index.d.ts:15901:5
+    15901     community?: NullableJsonNullValueInput | InputJsonValue
+              ~~~~~~~~~
+    The expected type comes from property 'community' which is declared here on type '(Without<PreferenceUpdateInput, PreferenceUncheckedUpdateInput> & PreferenceUncheckedUpdateInput) | (Without<...> & PreferenceUpdateInput)'
+
+src/modules/profile/profile.service.ts:232:15 - error TS2322: Type '{ cities?: string[] | undefined; countries?: string[] | undefined; willingToRelocate?: boolean | undefined; } | JsonValue' is not assignable to type 'NullableJsonNullValueInput | InputJsonValue | undefined'.
+  Type 'null' is not assignable to type 'NullableJsonNullValueInput | InputJsonValue | undefined'.
+
+232               location: stepData.data.preferences.location || existingPreferences.location,
+                  ~~~~~~~~
+
+  node_modules/.prisma/client/index.d.ts:15902:5
+    15902     location?: NullableJsonNullValueInput | InputJsonValue
+              ~~~~~~~~
+    The expected type comes from property 'location' which is declared here on type '(Without<PreferenceUpdateInput, PreferenceUncheckedUpdateInput> & PreferenceUncheckedUpdateInput) | (Without<...> & PreferenceUpdateInput)'
+
+src/modules/search/search.controller.ts:9:9 - error TS7030: Not all code paths return a value.
+
+9   async search(req: Request, res: Response, next: NextFunction) {
+          ~~~~~~
+
+src/modules/search/search.controller.ts:30:9 - error TS7030: Not all code paths return a value.
+
+30   async saveSearch(req: Request, res: Response, next: NextFunction) {
+           ~~~~~~~~~~
+
+src/modules/search/search.controller.ts:43:9 - error TS7030: Not all code paths return a value.
+
+43   async getSavedSearches(req: Request, res: Response, next: NextFunction) {
+           ~~~~~~~~~~~~~~~~
+
+src/modules/search/search.controller.ts:55:9 - error TS7030: Not all code paths return a value.
+
+55   async deleteSavedSearch(req: Request, res: Response, next: NextFunction) {
+           ~~~~~~~~~~~~~~~~~
+
+
+Found 46 errors in 17 files.
+
+Errors  Files
+     2  src/modules/chat/chat.service.ts:308
+     7  src/modules/connections/connections.controller.ts:9
+     1  src/modules/connections/connections.service.ts:318
+     1  src/modules/connections/idempotency.service.ts:17
+     3  src/modules/discovery/discovery.controller.ts:7
+     1  src/modules/media/cloudinary.service.ts:22
+     1  src/modules/media/local/local.storage.service.ts:3
+     5  src/modules/media/media.controller.ts:8
+     1  src/modules/media/media.service.ts:85
+     1  src/modules/media/moderation.controller.ts:8
+     1  src/modules/media/s3.service.ts:17
+     1  src/modules/profile/completeness.service.ts:109
+     8  src/modules/profile/profile.controller.ts:7
+     1  src/modules/profile/profile.permissions.ts:14
+     1  src/modules/profile/profile.routes.ts:27
+     7  src/modules/profile/profile.service.ts:6
+     4  src/modules/search/search.controller.ts:9

@@ -1,0 +1,204 @@
+🧠 MODULE 8 — NOTIFICATION SYSTEM (BACKEND ONLY)
+⚠ DO NOT regenerate other modules
+⚠ DO NOT modify existing endpoints unless explicitly stated
+⚠ DO NOT install packages or run migrations automatically
+Create / update ONLY the files described below
+
+🎯 GOALS
+
+Implement a scalable notification architecture with:
+
+In-app notification persistence
+
+Email notifications (via Nodemailer)
+
+Push notification queue (FCM stub only — no credentials)
+
+Unified notification service and dispatcher
+
+Notification preferences support
+
+Notification templates per event type
+
+DB schema for notifications + delivery status
+
+Event bus stub to receive notifications from other modules (chat, interests, moderation, payments, guardian, etc.)
+
+📁 CREATE FILES
+/backend/src/modules/notifications/
+  notification.routes.ts
+  notification.controller.ts
+  notification.service.ts
+  notification.dispatcher.ts
+  notification.templates.ts
+  notification.types.ts
+  notification.dto.ts
+  notification.priorities.ts
+  notificationPreference.service.ts
+  notification.test.ts
+  openapi.notifications.yml
+
+
+Also create these helpers:
+
+/backend/src/events/eventBus.ts   # simple publish/subscribe emitter
+
+🧬 PRISMA — SCHEMA APPEND ONLY (NO MIGRATION EXECUTION IN REPLIT)
+
+Append the following models to schema.prisma:
+
+model Notification {
+  id           String   @id @default(uuid())
+  userId       String
+  type         String   // e.g., otp, interest_received, interest_accepted, new_message, profile_view, subscription, moderation
+  title        String
+  body         String
+  metadata     Json?
+  isRead       Boolean  @default(false)
+  deliveredAt  DateTime?
+  createdAt    DateTime @default(now())
+
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model NotificationPreference {
+  id                 String   @id @default(uuid())
+  userId             String   @unique
+  emailEnabled       Boolean  @default(true)
+  pushEnabled        Boolean  @default(true)
+  inAppEnabled       Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+🌐 REST ENDPOINTS (JWT PROTECTED)
+GET   /api/v1/notifications                # list notifications
+PATCH /api/v1/notifications/:id/read       # mark one as read
+PATCH /api/v1/notifications/read-all       # bulk mark
+GET   /api/v1/notifications/preferences    # get preferences
+PATCH /api/v1/notifications/preferences    # update preferences
+
+
+Response examples included in OpenAPI file.
+
+🔔 NOTIFICATION TYPES & TEMPLATES
+
+Create notification.templates.ts that contains template functions for:
+
+OTP
+
+Interest received
+
+Interest accepted
+
+New chat message
+
+Profile viewed
+
+Parent/guardian added
+
+Subscription purchase
+
+Moderation action
+
+Example structure:
+
+export const templates = {
+  otp: (data) => ({
+    title: "Verify your email",
+    body: `Your OTP is ${data.otp}`
+  }),
+  interest_received: (data) => ({
+    title: "You have a new interest!",
+    body: `${data.from} has shown interest in your profile`
+  }),
+  ...
+};
+
+🔄 EVENT-DRIVEN BEHAVIOR
+
+Create /src/events/eventBus.ts:
+
+import { EventEmitter } from "events";
+export const eventBus = new EventEmitter();
+
+
+The notification dispatcher must subscribe to the event bus:
+
+eventBus.on("notify", async (payload) => {
+  await NotificationDispatcher.handle(payload);
+});
+
+
+Other modules will trigger notifications via:
+
+eventBus.emit("notify", {
+  userId: "...",
+  type: "interest_received",
+  metadata: {...}
+});
+
+🚚 DELIVERY PRIORITY QUEUE
+
+notification.dispatcher.ts should support 3 levels:
+
+IMMEDIATE → email + in-app  
+HIGH → push + in-app  
+LOW → in-app only
+
+
+DO NOT implement external queue workers.
+Provide stubs with commented instructions for future RabbitMQ / Redis streams.
+
+📧 EMAIL SENDER — NODemailer (STUB ONLY)
+
+In notification.service.ts, include:
+
+import nodemailer from "nodemailer";
+
+// Configure transporter ONLY if env provided
+const transporter = nodemailer.createTransport({...}) // leave commented
+
+async function sendEmail(to, subject, body) {
+  // If transporter not configured → skip silently
+}
+
+
+User will configure credentials locally — DO NOT embed secrets.
+
+🔐 SECURITY REQUIREMENTS
+
+Users may only fetch notifications where Notification.userId === loggedInUserId
+
+Notification preferences always checked before sending
+
+Do NOT expose metadata that contains PII in list endpoint
+
+🧪 TEST STUBS (GENERATE, DO NOT EXECUTE)
+
+Include unit tests for:
+
+dispatcher receives eventBus event
+
+email preferences applied
+
+mark read & read-all
+
+return notifications sorted by createdAt DESC
+
+unauthorized access blocked
+
+✔ EXPECTED REPLIT OUTPUT
+
+At completion, the AI agent should return:
+
+New & modified file contents only
+
+Prisma schema additions (no auto-migration execution)
+
+OpenAPI YAML for all endpoints
+
+Final line:
+“No installations or migrations were executed by the agent.”

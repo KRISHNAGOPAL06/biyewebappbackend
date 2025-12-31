@@ -1,0 +1,339 @@
+🧠 MODULE 4 — BACKEND ONLY — DISCOVERY + SEARCH SERVICE
+⚠️ PATCH ONLY — Do NOT re-generate previous modules.
+Do NOT install dependencies.
+Do NOT run Prisma migrate.
+Do NOT touch frontend.
+ONLY create/modify backend files.
+
+🎯 Goal
+
+Implement a complete Discovery + Search backend layer enabling:
+
+“Recommended” feed
+
+“New Today” feed
+
+“Nearby” feed (Geo filter stub—actual PostGIS in future)
+
+Basic search (age, height, marital status, religion, location…)
+
+Advanced search (education, income, profession, habits, lifestyle)
+
+Saved searches (basic model only)
+
+Redis caching for performance
+
+Cursor-based pagination (no OFFSET)
+
+Secure filtering rules (privacy-aware)
+
+Query cost limits (max filter depth)
+
+Prepared statements only (via Prisma)
+
+Phase-2 ready for ES indexing (create code hooks but no ES integration)
+
+📁 Directories & Files (to create/modify)
+/backend/src/modules/discovery/
+  discovery.routes.ts
+  discovery.controller.ts
+  discovery.service.ts
+  recommendation.service.ts
+  ranking.service.ts
+  search.dto.ts
+  discovery.test.ts      # generate but do NOT run
+  openapi.discovery.yml
+
+/backend/src/modules/search/
+  search.routes.ts
+  search.controller.ts
+  search.service.ts
+  saved-search.service.ts
+  search.dto.ts
+  search.test.ts         # don't run tests
+  openapi.search.yml
+
+/backend/src/utils/pagination.ts
+/backend/src/utils/queryCostGuard.ts
+/backend/src/utils/cache.service.ts
+
+/backend/src/config/redis.ts     # reuse, do not regenerate
+/backend/src/middleware/authMiddleware.ts   # may need minor additions
+
+🧬 PRISMA SCHEMA ADDITIONS
+
+Append to Prisma schema (do NOT migrate in Replit):
+
+model SavedSearch {
+  id          String   @id @default(uuid())
+  userId      String
+  name        String
+  filters     Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id])
+}
+
+
+Do NOT modify Profile schema except adding needed indexes.
+
+Add recommended indexes:
+
+@@index([published])
+@@index([gender])
+@@index([createdAt])
+
+// for search
+@@index([location], map: "idx_profile_location_jsonb")
+
+
+(Prisma will translate JSON fields depending on provider.)
+
+🔍 ENDPOINTS
+--------------------------------------
+1) DISCOVERY API
+--------------------------------------
+🔹 GET /api/v1/discovery/recommended
+
+Purpose:
+
+Return personalized feed
+
+Use ranking rules:
+
+recency
+
+completeness score
+
+similarity to preferences (basic only)
+
+Logic:
+
+Fetch profiles with published=true
+
+Filter out blocked users (stub)
+
+Apply base scoring in ranking.service.ts
+
+Apply cursor pagination
+
+Cache final results in Redis for 2 minutes using a compound key:
+discovery:recommended:user:{userId}:cursor:{cursor}
+
+Response:
+
+{
+  "data": [...profiles...],
+  "nextCursor": "string or null"
+}
+
+🔹 GET /api/v1/discovery/new
+
+Return profiles created “today”.
+
+Query:
+
+where: {
+  published: true,
+  createdAt: { gte: startOfToday }
+}
+
+
+Cursor pagination + caching (1 min TTL).
+
+🔹 GET /api/v1/discovery/nearby
+
+Stub for now.
+Use:
+
+location.city = user.city
+
+
+Phase-2: PostGIS.
+
+--------------------------------------
+2) SEARCH API
+--------------------------------------
+🔹 POST /api/v1/search
+
+Body:
+
+{
+  "basic": {
+    "ageRange": [25, 30],
+    "heightRange": [160, 180],
+    "maritalStatus": ["never_married", "divorced"],
+    "location": {
+      "city": "Kolkata",
+      "state": "WB",
+      "country": "India"
+    }
+  },
+  "advanced": {
+    "education": ["B.Tech", "MCA"],
+    "profession": ["Engineer"],
+    "income": { "min": 300000, "max": 2500000 },
+    "diet": ["Vegetarian"],
+    "smoking": "No",
+    "drinking": "Occasionally"
+  },
+  "limit": 20,
+  "cursor": null
+}
+
+
+Features:
+
+Server validates using Zod (search.dto.ts)
+
+Enforce query cost guard (e.g., max 30 filters)
+
+Convert age range → DOB range
+
+Convert city/state filters → JSON queries
+
+Use Prisma cursor + take pagination
+
+Respect privacy + block rules
+
+Cache only basic searches (TTL 30 secs)
+
+Response:
+
+{ data, nextCursor }
+
+🔹 POST /api/v1/search/save
+
+Save a search configuration.
+
+🔹 GET /api/v1/search/saved
+
+Return list of saved searches.
+
+🔹 DELETE /api/v1/search/saved/:id
+
+Delete saved search belonging to user.
+
+🧠 SEARCH LOGIC DETAILS
+Ranking
+
+ranking.service.ts implements:
+
+recencyScore
+
+completenessScore
+
+preferenceMatchScore (simple weights only for age, height, location)
+
+totalScore = weighted sum
+
+Pagination
+
+pagination.ts must implement cursor encoding/decoding with:
+
+{ id, createdAt }
+
+
+Do NOT use offset.
+
+Query Cost Guard
+
+queryCostGuard.ts:
+
+Count filters from body
+
+If > MAX_QUERY_COST → reject with { error: "QUERY_TOO_EXPENSIVE" }
+
+MAX_QUERY_COST from env
+Default: 30
+
+🛡️ PRIVACY RULES
+
+public users see only masked profiles
+
+authenticated users see more fields
+
+owner sees full
+
+guardian/premium (future modules) ready
+
+Always sanitize returned JSON (no internal fields)
+
+Use existing profile.permissions.ts.
+
+⚡ REDIS CACHING
+
+Use existing /config/redis.ts.
+
+Create:
+
+cache.service.ts
+
+
+Functions:
+
+cacheGet(key)
+
+cacheSet(key, value, ttl)
+
+auto JSON serialize/parse
+
+do NOT call redis in Replit (safe stub)
+
+📘 OPENAPI DOCUMENTATION
+
+Create 2 files:
+
+openapi.discovery.yml
+openapi.search.yml
+
+
+Each should include:
+
+tags
+
+schemas for filters
+
+examples
+
+cursor pagination format
+
+🧪 TEST FILES (GENERATE ONLY)
+
+Create test stubs:
+
+ranking logic
+
+search validation
+
+cost guard
+
+discovery service (mock prisma + redis)
+
+Do NOT run tests.
+
+❌ DO NOT DO
+
+No dependency installation
+
+No migrations
+
+No running commands
+
+No modifying existing modules
+
+No AWS/ES calls
+
+No reading vendor SDKs
+
+✔️ RESPOND WITH
+
+File tree changes
+
+Contents of new files
+
+Updated Prisma schema
+
+OpenAPI files
+
+Note: “No installs/migrations were executed.”

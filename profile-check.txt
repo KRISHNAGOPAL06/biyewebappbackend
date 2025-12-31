@@ -1,0 +1,34 @@
+========================================
+TOTAL PROFILES: 2
+========================================
+
+--- PROFILE 1 ---
+ID:          a642478c-58ed-444a-bc65-90bf4a1bb343
+Email:       krishnagopal7872@gmail.com
+Published:   true
+Gender:      Male
+LookingFor:  bride
+DeletedAt:   null
+
+--- PROFILE 2 ---
+ID:          43881156-d68c-4aaf-a2e4-0c92783d5bc1
+Email:       krishnagopalhalder83@gmail.com
+Published:   true
+Gender:      Female
+LookingFor:  groom
+DeletedAt:   null
+
+========================================
+MATCHING ANALYSIS
+========================================
+Published profiles: 2
+
+krishnagopal7872@gmail.com:
+  - Is Male, looking for bride (female)
+  - Potential matches: 1
+    * krishnagopalhalder83@gmail.com (Female)
+
+krishnagopalhalder83@gmail.com:
+  - Is Female, looking for groom (male)
+  - Potential matches: 1
+    * krishnagopal7872@gmail.com (Male)

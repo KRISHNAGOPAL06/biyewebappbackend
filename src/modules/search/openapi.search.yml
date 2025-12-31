@@ -1,0 +1,369 @@
+openapi: 3.0.3
+info:
+  title: Biye Matrimonial - Search API
+  version: 1.0.0
+  description: Advanced profile search with filters and saved searches
+
+servers:
+  - url: http://localhost:3000/api/v1
+    description: Development server
+  - url: https://api.biye.example.com/api/v1
+    description: Production server
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    BasicFilters:
+      type: object
+      properties:
+        ageRange:
+          type: array
+          items:
+            type: integer
+          minItems: 2
+          maxItems: 2
+          example: [25, 35]
+        heightRange:
+          type: array
+          items:
+            type: integer
+          minItems: 2
+          maxItems: 2
+          example: [160, 180]
+        maritalStatus:
+          type: array
+          items:
+            type: string
+          example: ["never_married", "divorced"]
+        religion:
+          type: string
+          example: "Hindu"
+        location:
+          type: object
+          properties:
+            city:
+              type: string
+              example: "Kolkata"
+            state:
+              type: string
+              example: "WB"
+            country:
+              type: string
+              example: "India"
+
+    AdvancedFilters:
+      type: object
+      properties:
+        education:
+          type: array
+          items:
+            type: string
+          example: ["B.Tech", "MCA"]
+        profession:
+          type: array
+          items:
+            type: string
+          example: ["Engineer"]
+        income:
+          type: object
+          properties:
+            min:
+              type: integer
+              example: 300000
+            max:
+              type: integer
+              example: 2500000
+        diet:
+          type: array
+          items:
+            type: string
+          example: ["Vegetarian"]
+        smoking:
+          type: string
+          example: "No"
+        drinking:
+          type: string
+          example: "Occasionally"
+
+    SearchRequest:
+      type: object
+      properties:
+        basic:
+          $ref: '#/components/schemas/BasicFilters'
+        advanced:
+          $ref: '#/components/schemas/AdvancedFilters'
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+        cursor:
+          type: string
+          description: Pagination cursor
+
+    SaveSearchRequest:
+      type: object
+      required:
+        - name
+        - filters
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          example: "Engineers in Kolkata"
+        filters:
+          type: object
+          properties:
+            basic:
+              $ref: '#/components/schemas/BasicFilters'
+            advanced:
+              $ref: '#/components/schemas/AdvancedFilters'
+
+    SavedSearch:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        filters:
+          type: object
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    SearchResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+        nextCursor:
+          type: string
+          nullable: true
+
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+        message:
+          type: string
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          properties:
+            message:
+              type: string
+            code:
+              type: string
+
+paths:
+  /search:
+    post:
+      summary: Search profiles with filters
+      description: |
+        Execute a filtered search with basic and/or advanced criteria.
+        
+        **Query Cost Guard**: Max 30 filters allowed (configurable via MAX_QUERY_COST).
+        Exceeding the limit returns `QUERY_TOO_EXPENSIVE` error.
+        
+        **Caching**: Basic searches (without advanced filters) are cached for 30 seconds.
+        
+        **Pagination**: Uses cursor-based pagination. Pass `nextCursor` from response.
+      operationId: search
+      security:
+        - BearerAuth: []
+      tags:
+        - Search
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SearchRequest'
+            examples:
+              basicSearch:
+                summary: Basic search example
+                value:
+                  basic:
+                    ageRange: [25, 30]
+                    location:
+                      city: "Kolkata"
+                  limit: 20
+              advancedSearch:
+                summary: Advanced search example
+                value:
+                  basic:
+                    ageRange: [25, 35]
+                    maritalStatus: ["never_married"]
+                  advanced:
+                    education: ["B.Tech", "MCA"]
+                    profession: ["Engineer"]
+                    income:
+                      min: 300000
+                      max: 2500000
+                  limit: 20
+      responses:
+        '200':
+          description: Search completed successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/SearchResponse'
+        '400':
+          description: Query cost limit exceeded or validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error:
+                  message: "QUERY_TOO_EXPENSIVE: Cost 45 exceeds maximum 30"
+                  code: "QUERY_TOO_EXPENSIVE"
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /search/save:
+    post:
+      summary: Save a search configuration
+      description: Save search filters for quick access later
+      operationId: saveSearch
+      security:
+        - BearerAuth: []
+      tags:
+        - Search
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveSearchRequest'
+      responses:
+        '201':
+          description: Search saved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/SavedSearch'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /search/saved:
+    get:
+      summary: Get all saved searches
+      description: Retrieve all saved searches for the authenticated user
+      operationId: getSavedSearches
+      security:
+        - BearerAuth: []
+      tags:
+        - Search
+      responses:
+        '200':
+          description: Saved searches retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/SavedSearch'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /search/saved/{id}:
+    delete:
+      summary: Delete a saved search
+      description: Delete a saved search (owner only)
+      operationId: deleteSavedSearch
+      security:
+        - BearerAuth: []
+      tags:
+        - Search
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Saved search ID
+      responses:
+        '200':
+          description: Saved search deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden (not owner)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Saved search not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+tags:
+  - name: Search
+    description: Advanced search and saved searches

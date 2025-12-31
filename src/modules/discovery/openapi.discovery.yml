@@ -1,0 +1,239 @@
+openapi: 3.0.3
+info:
+  title: Biye Matrimonial - Discovery API
+  version: 1.0.0
+  description: Profile discovery endpoints with personalized recommendations
+
+servers:
+  - url: http://localhost:3000/api/v1
+    description: Development server
+  - url: https://api.biye.example.com/api/v1
+    description: Production server
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    PaginationCursor:
+      type: object
+      properties:
+        cursor:
+          type: string
+          description: Base64-encoded cursor for pagination
+          example: "eyJpZCI6IjEyMyIsImNyZWF0ZWRBdCI6IjIwMjUtMTEtMjJUMTA6MDA6MDBaIn0="
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+          description: Number of results per page
+
+    ProfileSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        displayName:
+          type: string
+        headline:
+          type: string
+          nullable: true
+        gender:
+          type: string
+          nullable: true
+        age:
+          type: integer
+          nullable: true
+        completeness:
+          type: integer
+        location:
+          type: object
+          nullable: true
+
+    DiscoveryResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProfileSummary'
+        nextCursor:
+          type: string
+          nullable: true
+          description: Cursor for next page, null if no more results
+
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+        message:
+          type: string
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          properties:
+            message:
+              type: string
+            code:
+              type: string
+
+paths:
+  /discovery/recommended:
+    get:
+      summary: Get recommended profiles
+      description: |
+        Returns personalized profile recommendations based on:
+        - Recency (newer profiles ranked higher)
+        - Completeness score (complete profiles ranked higher)
+        - Preference matching (profiles matching user preferences)
+        
+        Results are cached for 2 minutes per user/cursor combination.
+      operationId: getRecommended
+      security:
+        - BearerAuth: []
+      tags:
+        - Discovery
+      parameters:
+        - name: cursor
+          in: query
+          schema:
+            type: string
+          description: Pagination cursor from previous response
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: Number of profiles to return
+      responses:
+        '200':
+          description: Recommended profiles retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/DiscoveryResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /discovery/new:
+    get:
+      summary: Get new profiles created today
+      description: |
+        Returns profiles created within the last 24 hours.
+        Sorted by creation time (newest first).
+        Cached for 1 minute.
+      operationId: getNewToday
+      security:
+        - BearerAuth: []
+      tags:
+        - Discovery
+      parameters:
+        - name: cursor
+          in: query
+          schema:
+            type: string
+          description: Pagination cursor
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: Number of profiles to return
+      responses:
+        '200':
+          description: New profiles retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/DiscoveryResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /discovery/nearby:
+    get:
+      summary: Get nearby profiles
+      description: |
+        Returns profiles from the same city as the authenticated user.
+        
+        **Note**: This is a stub implementation using city matching only.
+        Phase 2 will use PostGIS for accurate geo-distance queries.
+        
+        Cached for 2 minutes.
+      operationId: getNearby
+      security:
+        - BearerAuth: []
+      tags:
+        - Discovery
+      parameters:
+        - name: cursor
+          in: query
+          schema:
+            type: string
+          description: Pagination cursor
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: Number of profiles to return
+      responses:
+        '200':
+          description: Nearby profiles retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/DiscoveryResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+tags:
+  - name: Discovery
+    description: Profile discovery and recommendation endpoints

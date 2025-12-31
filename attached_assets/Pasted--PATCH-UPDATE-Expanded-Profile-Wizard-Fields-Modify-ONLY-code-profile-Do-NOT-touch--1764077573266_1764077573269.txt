@@ -1,0 +1,168 @@
+🧠 PATCH UPDATE — (Expanded Profile Wizard Fields)
+ ⚠ Modify ONLY code (profile).
+ ⚠ Do NOT touch any other module.
+ ⚠ Do NOT regenerate.
+ ⚠ Add fields + validations only.
+
+🎯 WHAT TO UPDATE
+1. Prisma Schema (APPEND FIELDS ONLY)
+Inside Profile model, add:
+model Profile {
+  // About Me
+  headline         String?
+  description      String?
+  languagesKnown   String[]
+
+
+  // Demographics
+  height           Int?
+  weight           Int?
+  highestEducation String?
+  fieldOfStudy     String?
+  profession       String?
+  religion         String?
+  ancestralHome    String?
+  division         String?
+
+
+  // Family
+  maritalStatus    String?
+  fatherOccupation String?
+  motherOccupation String?
+  siblingsCount    Int?
+  childrenCount    Int?
+  childrenStatus   String?
+
+
+  // Lifestyle & Interests
+  hobbies          String[]
+  dietPreference   String?
+  smokingHabit     String?
+  drinkingHabit    String?
+  exerciseRoutine  String?
+  petPreference    String?
+  livingSituation  String?
+
+
+  // Partner Preferences
+  prefAgeRangeFrom       Int?
+  prefAgeRangeTo         Int?
+  prefHeightFrom         Int?
+  prefHeightTo           Int?
+  prefLocation           Json?
+  prefEducation          String?
+  prefProfession         String?
+  prefReligion           String?
+  prefMaritalStatus      String?
+  prefChildrenCount      Int?
+  prefChildrenStatus     String?
+  prefDietPreference     String?
+  prefSmokingHabit       String?
+  prefDrinkingHabit      String?
+
+
+  // Existing fields remain unchanged
+}
+
+
+2. Update DTOs (profile.dto.ts)
+Create Zod schemas for each step:
+About Me
+export const aboutMeSchema = z.object({
+  headline: z.string().optional(),
+  description: z.string().optional(),
+  languagesKnown: z.array(z.string())
+});
+
+Demographics
+export const demographicsSchema = z.object({
+  height: z.number().optional(),
+  weight: z.number().optional(),
+  highestEducation: z.string().optional(),
+  fieldOfStudy: z.string().optional(),
+  profession: z.string().optional(),
+  religion: z.string().optional(),
+  ancestralHome: z.string().optional(),
+  division: z.string().optional()
+});
+
+Family Details
+export const familySchema = z.object({
+  maritalStatus: z.string().optional(),
+  fatherOccupation: z.string().optional(),
+  motherOccupation: z.string().optional(),
+  siblingsCount: z.number().optional(),
+  childrenCount: z.number().optional(),
+  childrenStatus: z.string().optional()
+});
+
+Lifestyle & Interests
+export const lifestyleSchema = z.object({
+  hobbies: z.array(z.string()).optional(),
+  dietPreference: z.string().optional(),
+  smokingHabit: z.string().optional(),
+  drinkingHabit: z.string().optional(),
+  exerciseRoutine: z.string().optional(),
+  petPreference: z.string().optional(),
+  livingSituation: z.string().optional()
+});
+
+Partner Preferences
+export const partnerPreferenceSchema = z.object({
+  prefAgeRangeFrom: z.number().optional(),
+  prefAgeRangeTo: z.number().optional(),
+  prefHeightFrom: z.number().optional(),
+  prefHeightTo: z.number().optional(),
+  prefLocation: z.any().optional(),
+  prefEducation: z.string().optional(),
+  prefProfession: z.string().optional(),
+  prefReligion: z.string().optional(),
+  prefMaritalStatus: z.string().optional(),
+  prefChildrenCount: z.number().optional(),
+  prefChildrenStatus: z.string().optional(),
+  prefDietPreference: z.string().optional(),
+  prefSmokingHabit: z.string().optional(),
+  prefDrinkingHabit: z.string().optional()
+});
+
+
+3. Update Controller (profile.controller.ts)
+Add update functions:
+updateAboutMe()
+updateDemographics()
+updateFamilyDetails()
+updateLifestyle()
+updatePartnerPreferences()
+
+Each should:
+Validate using respective schema
+
+
+Update Profile row with only passed fields
+
+
+
+4. Update Routes (profile.routes.ts)
+Add:
+PATCH /api/v1/profile/about
+PATCH /api/v1/profile/demographics
+PATCH /api/v1/profile/family
+PATCH /api/v1/profile/lifestyle
+PATCH /api/v1/profile/preferences
+
+JWT-protected.
+
+✔ REPLIT MUST RETURN
+Updated Prisma schema section
+
+
+Updated DTOs
+
+
+Updated route/controller functions
+
+
+Note: “No installs/migrations executed.”
+
+
+

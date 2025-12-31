@@ -1,0 +1,379 @@
+openapi: 3.0.3
+info:
+  title: Biye Backend API - Authentication Module
+  description: Production-grade authentication API with email OTP and JWT refresh token rotation
+  version: 1.0.0
+servers:
+  - url: http://localhost:3000/api/v1
+    description: Development server
+  - url: https://api.biye.com/api/v1
+    description: Production server
+
+tags:
+  - name: Authentication
+    description: User authentication and session management endpoints
+
+paths:
+  /auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Register a new user
+      description: |
+        Initiates user registration by creating an unverified user and sending a 6-digit OTP to the provided email.
+        If the user already exists but is unverified, resends the OTP.
+        Rate limited to 5 requests per 15 minutes per IP.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: user@example.com
+                fullName:
+                  type: string
+                  minLength: 1
+                  example: John Doe
+                phoneNumber:
+                  type: string
+                  pattern: '^\+?[1-9]\d{1,14}$'
+                  example: '+1234567890'
+      responses:
+        '201':
+          description: OTP sent successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      success:
+                        type: boolean
+                      message:
+                        type: string
+                        example: 'OTP sent to your email. Please verify to complete registration.'
+        '400':
+          description: Validation error or user already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Too many requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/verify:
+    post:
+      tags:
+        - Authentication
+      summary: Verify OTP and complete registration
+      description: |
+        Verifies the OTP sent to the user's email and completes registration.
+        Creates a new session and returns access token and refresh token (in HttpOnly cookie).
+        Rate limited to 10 requests per 15 minutes per IP.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - otp
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: user@example.com
+                otp:
+                  type: string
+                  pattern: '^\d{6}$'
+                  example: '123456'
+      responses:
+        '200':
+          description: Verification successful
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+                example: refreshToken=abc123; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=604800
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/AuthResponse'
+                  message:
+                    type: string
+                    example: 'Verification successful'
+        '400':
+          description: Invalid or expired OTP
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Too many requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: Login existing user
+      description: |
+        Sends a login OTP to the verified user's email.
+        User must be verified to login.
+        Rate limited to 5 requests per 15 minutes per IP.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: user@example.com
+      responses:
+        '200':
+          description: OTP sent successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      success:
+                        type: boolean
+                      message:
+                        type: string
+                        example: 'OTP sent to your email. Please verify to login.'
+        '400':
+          description: User not found or not verified
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Too many requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/refresh:
+    post:
+      tags:
+        - Authentication
+      summary: Refresh access token
+      description: |
+        Refreshes the access token using the refresh token from HttpOnly cookie.
+        Implements token rotation - old refresh token is invalidated and new one is issued.
+        Detects and prevents token reuse attacks.
+        Rate limited to 10 requests per 15 minutes per IP.
+      responses:
+        '200':
+          description: Token refreshed successfully
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+                example: refreshToken=xyz789; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=604800
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/AuthResponse'
+                  message:
+                    type: string
+                    example: 'Token refreshed successfully'
+        '400':
+          description: Invalid or expired refresh token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Token reuse detected or session revoked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Too many requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/logout:
+    post:
+      tags:
+        - Authentication
+      summary: Logout user
+      description: |
+        Invalidates the refresh token and revokes the user's session.
+        Clears the refresh token cookie.
+        Requires valid access token.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Logged out successfully
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+                example: refreshToken=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: null
+                  message:
+                    type: string
+                    example: 'Logged out successfully'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/me:
+    get:
+      tags:
+        - Authentication
+      summary: Get current user
+      description: |
+        Returns the authenticated user's information.
+        Requires valid access token.
+        Does not return sensitive fields like OTP hash.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: User retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/UserResponse'
+                  message:
+                    type: string
+                    example: 'User retrieved successfully'
+        '401':
+          description: Unauthorized or token expired
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT access token (valid for 15 minutes)
+
+  schemas:
+    AuthResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+          example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+        user:
+          $ref: '#/components/schemas/UserResponse'
+
+    UserResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: '123e4567-e89b-12d3-a456-426614174000'
+        email:
+          type: string
+          format: email
+          example: 'user@example.com'
+        fullName:
+          type: string
+          nullable: true
+          example: 'John Doe'
+        phoneNumber:
+          type: string
+          nullable: true
+          example: '+1234567890'
+        isVerified:
+          type: boolean
+          example: true
+        createdAt:
+          type: string
+          format: date-time
+          example: '2025-01-15T10:30:00.000Z'
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          properties:
+            message:
+              type: string
+              example: 'Invalid OTP'
+            code:
+              type: string
+              example: 'VALIDATION_ERROR'
+            details:
+              type: object
+              nullable: true

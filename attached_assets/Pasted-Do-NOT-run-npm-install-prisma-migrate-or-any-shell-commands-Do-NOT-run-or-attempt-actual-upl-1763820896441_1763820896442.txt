@@ -1,0 +1,274 @@
+Do NOT run npm install, prisma migrate, or any shell commands.
+
+
+Do NOT run or attempt actual uploads or connect to AWS/Cloudinary from Replit.
+
+
+The Agent must only create/modify files (service, controllers, routes, tests, OpenAPI docs, and helpful comments).
+
+
+You will perform dependency installation, environment configuration, and local testing manually (instructions included below).
+
+
+
+🧠 Goal
+ Add a secure, production-ready Media/Photo service that:
+Issues signed upload URLs for direct browser uploads (S3 PUT or Cloudinary unsigned/signed upload token)
+
+
+Stores only photo metadata (objectKey, url after moderation, privacyLevel, fileSize, moderationStatus) in DB (no raw image data)
+
+
+Implements strict MIME & size checks and privacyLevel validation server-side before issuing upload URL
+
+
+Provides webhook endpoint for moderation callback to update photo status and final URL (protected by secret)
+
+
+Adds endpoints to read photo metadata, delete photo metadata (owner-only), and list profile photos (respecting privacy)
+
+
+Includes a stub to enqueue a moderation job (background worker abstraction — do not run a worker in Replit)
+
+
+
+What to create / modify (file tree)
+/backend/src/modules/media/
+  media.routes.ts
+  media.controller.ts
+  media.service.ts
+  s3.service.ts           # create but do NOT run or connect
+  cloudinary.service.ts   # alternative provider implementation (create only)
+  moderation.routes.ts
+  moderation.controller.ts
+  moderation.service.ts   # handles moderation callbacks & updates
+  upload.dto.ts           # Zod schemas for upload request
+  media.test.ts           # unit tests (mock SDKs, do NOT run)
+  openapi.media.yml       # OpenAPI docs for endpoints
+
+Also (if not already present) verify prisma/schema.prisma includes or add the Photo fields:
+model Photo {
+  id               String    @id @default(uuid())
+  profileId        String
+  objectKey        String?   // required for S3 object key or Cloudinary public_id
+  url              String?   // final CDN URL (filled after moderation or immediate)
+  fileSize         Int?      // bytes
+  mimeType         String?   // image/jpeg, image/png, ...
+  privacyLevel     String    @default("public") // public | matches | on_request | private
+  moderationStatus String    @default("pending") // pending | approved | rejected
+  moderationNote   String?   // reason if rejected
+  createdAt        DateTime  @default(now())
+  uploadedAt       DateTime?
+  profile          Profile   @relation(fields: [profileId], references: [id])
+}
+
+Do not run migrations in Replit. Generate schema changes and migration SQL files only (if your workflow prefers). You will run npx prisma migrate dev locally.
+
+Endpoints to implement
+All endpoints under /api/v1/media unless otherwise noted.
+1) POST /api/v1/media/upload-url
+Purpose: return a signed upload URL + upload metadata token.
+ Auth: Protected — caller must be the owner of the profileId.
+ Body (Zod validated):
+{
+  "profileId": "string",
+  "filename": "string",
+  "mimeType": "image/jpeg",
+  "fileSize": 12345,
+  "privacyLevel": "public"
+}
+
+Server logic (high level):
+Validate privacyLevel in allowed enum.
+
+
+Validate mimeType is one of image/jpeg, image/png, image/webp, image/avif (configurable via env).
+
+
+Validate fileSize ≤ MAX_UPLOAD_BYTES (config via env; e.g., 5MB).
+
+
+Authorize owner of profileId.
+
+
+Create a pending Photo metadata record with moderationStatus = "pending", objectKey = generated key (e.g., profiles/{profileId}/{uuid()}_{filename}), fileSize and mimeType.
+
+
+Generate signed URL depending on provider:
+
+
+S3 PUT: presigned PUT URL with Content-Type enforcement and x-amz-acl: private (or signed POST if preferred). TTL e.g., 300s.
+
+
+Cloudinary: signed upload params or an upload preset token that restricts upload size/type (return upload URL and public_id).
+
+
+Return:
+
+
+{
+  "uploadUrl": "https://....", 
+  "objectKey": "profiles/...",
+  "expiresIn": 300,
+  "uploadMethod": "PUT" // or POST
+}
+
+Note: Do NOT upload or attempt to validate uploaded file contents here. Client will PUT directly to S3/Cloudinary. Backend trusts the moderation callback to confirm final URL.
+
+2) POST /api/v1/media/moderation-callback
+Purpose: used by your moderation worker or 3rd-party to notify approval/rejection and final CDN URL.
+ Auth / Security: require MODERATION_SECRET in X-Moderation-Secret header (HMAC validated). Reject if missing/invalid. Rate-limit and require JSON signature header optionally.
+ Body:
+{
+  "objectKey": "profiles/....",
+  "status": "approved",     // approved | rejected
+  "finalUrl": "https://cdn.example/....", // only for approved
+  "fileSize": 12345,
+  "mimeType": "image/jpeg",
+  "note": "blur detected"   // optional reason / moderation note
+}
+
+Server logic:
+Validate header secret.
+
+
+Find Photo by objectKey. If not found, log and return 404.
+
+
+Update Photo: moderationStatus, url (finalUrl if approved), fileSize, mimeType, moderationNote.
+
+
+Set uploadedAt = now() and set moderationStatus.
+
+
+Optionally, if approved → enqueue an event to Discovery indexer and notify owner (via notifications module).
+
+
+Create an AuditEvent entry for moderation action.
+
+
+Return: { success: true }
+
+3) GET /api/v1/media/:photoId
+Purpose: return photo metadata (not binary). Respect privacyLevel and requester's permissions (owner, mutual match, guardian, premium).
+ Auth: Optional — public access allowed but masked according to privacy.
+ Response (example):
+{
+  "id": "...",
+  "profileId": "...",
+  "url": "https://cdn.../img.jpg", // null until approved
+  "privacyLevel": "public",
+  "moderationStatus": "approved",
+  "uploadedAt": "2025-11-22T...",
+}
+
+
+4) DELETE /api/v1/media/:photoId
+Purpose: owner can remove photo metadata and optionally trigger object deletion in S3/Cloudinary (create a deletion job; do NOT attempt immediate deletion).
+ Auth: owner-only.
+ Behavior: mark photo deletedAt = now() and enqueue deletion job (background stub). Do not permanently remove DB row in API.
+
+5) GET /api/v1/profiles/:profileId/photos
+Purpose: list photos for a profile, apply privacy filter & moderation status (only show approved/public photos to general public).
+ Auth: depends on requester (owner sees all; others see masked set).
+
+Provider service implementations (create both; user picks via ENV var)
+s3.service.ts (AWS SDK v3 style — create file only)
+Expose createPresignedPutUrl({ bucket, key, contentType, expiresSeconds }) that returns { url, expiresAt }.
+
+
+Include a comment with exact install command for user:
+
+
+# Local install (do NOT run in Replit)
+npm install @aws-sdk/client-s3 @aws-sdk/s3-request-presigner
+
+The implementation should:
+
+
+construct PutObjectCommand with ContentType and ACL or Metadata.
+
+
+use getSignedUrl(s3Client, command, { expiresIn })
+
+
+DO NOT attempt to call AWS or validate credentials in Replit.
+
+
+cloudinary.service.ts (create file only)
+Expose createSignedUploadParams({ publicId, folder, maxBytes }) that returns an uploadUrl or signed params depending on Cloudinary flow.
+
+
+Add comment with exact install command:
+
+
+# Local install (do NOT run in Replit)
+npm install cloudinary
+
+Implementation should show how to call cloudinary.v2.uploader.upload signed parameters (but do not call).
+
+
+
+Background / Worker integration (stub)
+Create a moderationQueue.enqueueModeration(objectKey) stub in media.service.ts that pushes a job to queue.service (Redis-backed) — do not run worker. The job payload should include objectKey, profileId, and notification flags. Add comments about the worker that will POST to moderation-callback after processing.
+
+Security & Hardening Requirements (must be implemented in code)
+Validate user owns profile before issuing upload URL (server-side check).
+
+
+Ensure objectKey generation is unpredictable and uses uuid() to avoid enumeration.
+
+
+Signed URLs should be short-lived (default 5 minutes).
+
+
+Check mimeType + fileSize before issuing signed URL; reject if unsupported.
+
+
+Moderation callback must require X-Moderation-Secret and verify constant-time equals to env MODERATION_SECRET.
+
+
+Create MAX_UPLOAD_BYTES and ALLOWED_MIME_TYPES env-driven config.
+
+
+Log actions with logger including requestId.
+
+
+Do not return internal object keys publicly (unlessurl is approved and stored).
+
+
+
+Tests (generate only — do NOT run)
+Unit tests for:
+
+
+media.service.createUploadUrl with both S3 and Cloudinary mocked.
+
+
+moderation.service.onCallback logic (mock DB + queue).
+
+
+Validation rejects wrong mime/type/oversize.
+
+
+Use dependency injection to mock s3.service and cloudinary.service.
+
+
+
+OpenAPI (generate)
+Create openapi.media.yml with full schemas and examples for each endpoint. Include security schemes for bearer auth and X-Moderation-Secret.
+
+
+Response required from Replit Agent
+When finished, respond with:
+Files created/modified list (tree)
+
+
+Full contents of each created/modified file (TS/JS)
+
+
+The openapi.media.yml doc snippet (endpoints + schemas)
+
+
+Short note: “I did not run any installs, migrations, or network calls.”
+

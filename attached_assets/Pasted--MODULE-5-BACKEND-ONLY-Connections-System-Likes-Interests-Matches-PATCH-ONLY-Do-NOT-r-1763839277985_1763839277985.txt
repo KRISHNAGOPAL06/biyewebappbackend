@@ -1,0 +1,266 @@
+🧠 MODULE 5 — BACKEND ONLY — Connections System (Likes, Interests, Matches)
+⚠️ PATCH ONLY — Do NOT regenerate previous modules.
+Do NOT install dependencies.
+Do NOT run Prisma migrations in Replit.
+Do NOT modify frontend.
+ONLY create/update backend code.
+
+🎯 Goal of Module 5
+
+Implement the complete matchmaking interaction system:
+
+✔️ Send interest
+✔️ Withdraw interest
+✔️ Accept interest
+✔️ Decline interest
+✔️ Mutual match detection
+✔️ Retrieve lists:
+
+Interests Sent
+
+Interests Received
+
+Mutual Matches
+
+Shortlists (optional stub)
+
+✔️ Security rules:
+
+Rate limit → max 20 interest actions / day
+
+Block validation (cannot like blocked users)
+
+Cannot like yourself
+
+One active interest per pair
+
+Must have published profile
+
+Must not like profiles hidden via privacy rules
+
+✔️ Idempotency:
+
+Idempotency-Key header supported
+
+Backend must gracefully handle duplicate requests
+
+✔️ Notification hooks:
+
+Event stub: events.emit("interest.sent")
+
+Event stub: events.emit("interest.accepted")
+(No actual notification code — only stub)
+
+📁 FILES TO CREATE/MODIFY
+/backend/src/modules/connections/
+  connections.routes.ts
+  connections.controller.ts
+  connections.service.ts
+  connections.dto.ts
+  interestRateLimit.service.ts
+  idempotency.service.ts
+  connections.test.ts        # test stubs only
+  openapi.connections.yml
+
+🧬 PRISMA SCHEMA ADDITIONS
+
+Append to schema:
+
+model Interest {
+  id            String   @id @default(uuid())
+  fromUserId    String
+  toUserId      String
+  status        String   @default("pending") // pending | accepted | declined | withdrawn
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  fromUser      User     @relation(fields: [fromUserId], references: [id])
+  toUser        User     @relation(fields: [toUserId], references: [id])
+
+  @@unique([fromUserId, toUserId])
+}
+
+
+Indexes (append):
+
+@@index([fromUserId])
+@@index([toUserId])
+
+🔒 ENDPOINTS
+1) POST /api/v1/connections/interest
+
+Send interest to another user.
+
+Body:
+
+{ "toUserId": "..." }
+
+
+Server logic:
+
+Validate owner has published profile
+
+Cannot send to yourself
+
+Check block list (stub)
+
+Check rate limit (20 per day)
+
+If interest already exists:
+
+If status=pending → return existing
+
+If status=declined/withdrawn → update to pending
+
+Create or update interest record
+
+Trigger event stub
+
+Respond { status: "pending" }
+
+2) POST /api/v1/connections/interest/accept
+
+Body:
+
+{ "fromUserId": "..." }
+
+
+Logic:
+
+Check existence with status=pending
+
+Update to accepted
+
+Trigger events.emit("interest.accepted")
+
+Detect mutual match
+
+Respond { status: "accepted", isMatch: true/false }
+
+3) POST /api/v1/connections/interest/decline
+
+Same as accept → status="declined"
+
+4) POST /api/v1/connections/interest/withdraw
+
+User withdraws their own sent interest.
+
+Update → status="withdrawn"
+
+5) GET /api/v1/connections/interests/sent
+
+List interests user has sent.
+
+6) GET /api/v1/connections/interests/received
+
+List interests user has received.
+
+7) GET /api/v1/connections/matches
+
+Return list where:
+
+user sent → accepted
+
+user received → accepted
+
+This is a mutual match.
+
+Use optimized Prisma query:
+
+findMany where OR:
+  [
+    { fromUserId = me, status = "accepted" },
+    { toUserId = me, status = "accepted" }
+  ]
+
+
+Then filter where the other user also accepted.
+
+🔧 SUPPORT SERVICES
+✔️ interestRateLimit.service.ts
+
+Store per-user count in Redis (stub in Replit):
+
+Key: ratelimit:interest:{userId}:{YYYYMMDD}
+
+Max: 20/day
+
+Increment on every interest action
+
+Reject with { error: "LIMIT_REACHED" }
+
+✔️ idempotency.service.ts
+
+If request contains header:
+
+Idempotency-Key: <uuid>
+
+
+Store response hash in Redis for 10 minutes.
+Return identical response on duplicate request.
+
+✔️ connections.dto.ts
+
+Zod validation schemas.
+
+🛡️ SECURITY RULES
+
+All endpoints protected with JWT
+
+Validate profile published=true
+
+Respect block list (provide stub now)
+
+Log every interaction with userId + IP
+
+Idempotency enabled for all POST endpoints
+
+429 on rate limit
+
+Access control:
+
+only receiver can accept/decline
+
+only sender can withdraw
+
+📘 OPENAPI
+
+Create openapi.connections.yml:
+
+All endpoints
+
+Request/response schemas
+
+Rate limit notes
+
+Idempotency header documentation
+
+🧪 TESTS (don’t run)
+
+Create test stubs for:
+
+sending interest
+
+accepting interest
+
+mutual match detection
+
+rate limit overflows
+
+idempotency
+
+invalid actions (self-like, duplicate like, blocked)
+
+✔️ RESPOND WITH
+
+File tree
+
+Contents of all new/changed files
+
+Prisma additions
+
+Tests (stubs)
+
+OpenAPI docs
+
+“No installs or migrations executed.”

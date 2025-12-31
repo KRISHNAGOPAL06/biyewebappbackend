@@ -1,0 +1,185 @@
+🧠 MODULE 1 — BACKEND ONLY — AUTHENTICATION (EMAIL OTP + JWT REFRESH ROTATION)
+⚠️ IMPORTANT:
+Do NOT install dependencies.
+Do NOT run tests.
+Do NOT run Prisma migrate.
+ONLY create/modify backend files.
+Do not touch frontend.
+
+GOAL
+
+Add a complete, production-grade Authentication module with:
+
+Email-based OTP login & signup (no phone OTP)
+
+Hashed OTP + expiry
+
+JWT access tokens (15m)
+
+Rotating refresh tokens (stored in Redis)
+
+Session tracking (device/IP/UA)
+
+Logout, refresh, me
+
+Full Zod validation
+
+Prisma schema updates (User + Session models)
+
+Unit test files (don’t run them)
+
+OpenAPI docs for all endpoints
+
+FILES TO CREATE/MODIFY
+/backend/src/modules/auth/
+  auth.routes.ts
+  auth.controller.ts
+  auth.service.ts
+  auth.dto.ts
+  token.service.ts
+  email.service.ts
+  session.service.ts
+  auth.types.ts
+  auth.test.ts   # generate but do NOT run
+
+/backend/src/middleware/authMiddleware.ts   # implement token validation here
+/backend/src/config/redis.ts                  # basic redis client wrapper (NO CONNECT TEST)
+
+PRISMA SCHEMA CHANGES (DO NOT MIGRATE)
+
+Append the following models to schema.prisma:
+
+model User {
+  id          String    @id @default(uuid())
+  email       String    @unique
+  fullName    String?
+  phoneNumber String?
+  isVerified  Boolean   @default(false)
+  otpHash     String?
+  otpExpiry   DateTime?
+  sessions    Session[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Session {
+  id         String   @id @default(uuid())
+  userId     String
+  deviceId   String?
+  ip         String?
+  userAgent  String?
+  revoked    Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  lastSeenAt DateTime @updatedAt
+  user       User     @relation(fields: [userId], references: [id])
+}
+
+ENDPOINTS TO IMPLEMENT
+
+Create REST endpoints under:
+/api/v1/auth/
+
+1) POST /register
+
+Body: { email, fullName?, phoneNumber? }
+
+If existing unverified user → resend OTP
+
+Else create new user (isVerified=false)
+
+Generate 6-digit OTP
+
+Hash with bcrypt
+
+Save otpHash + otpExpiry (+5min)
+
+Send email via email.service.ts → NO real sending, just stub
+
+Return { success: true }
+
+2) POST /verify
+
+Body { email, otp }
+
+Validate OTP + expiry
+
+Mark user verified
+
+Create Session record
+
+Generate:
+
+accessToken (JWT, 15m)
+
+refreshToken (UUID, stored hashed in Redis)
+
+Set refresh token in HttpOnly Secure cookie
+
+Return { accessToken, user }
+
+3) POST /login
+
+Body { email }
+
+Send login OTP (same as register OTP path)
+
+4) POST /refresh
+
+Read refresh token from HttpOnly cookie
+
+Verify Redis token entry
+
+Rotate: delete old token, create new one
+
+Return new access token + set new refresh cookie
+
+5) POST /logout
+
+Invalidate refresh token in Redis
+
+Revoke Session in DB
+
+Clear cookie
+
+6) GET /me
+
+Protected; return user basic data (no OTP fields)
+
+SECURITY REQUIREMENTS
+
+Hash OTP using bcrypt (never store plain OTP)
+
+Rate-limit OTP generation (3 per 15 min per email)
+
+Zod validation for every request
+
+Set refresh cookies as:
+HttpOnly; Secure; SameSite=Strict; Path=/
+
+Do not log OTP or JWT
+
+Provide a utility for token reuse detection
+
+DO NOT DO
+
+❌ Do NOT install dependencies
+❌ Do NOT run migrate
+❌ Do NOT run redis
+❌ Do NOT run tests
+❌ Do NOT modify frontend
+❌ Do NOT create Docker files
+
+YOU MAY DO
+
+✔️ create / modify TypeScript files
+✔️ update Prisma schema
+✔️ write OpenAPI entries
+✔️ generate test files (don’t run)
+
+RESPOND WITH
+
+The file tree
+
+All created/updated file contents
+
+OpenAPI specs for all auth endpoints

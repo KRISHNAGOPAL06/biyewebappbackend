@@ -1,0 +1,1 @@
+{"success":false,"error":{"message":"\nInvalid `prisma.user.findUnique()` invocation in\nD:\\Biyeapp\\Biyeco-Backend\\src\\modules\\auth\\auth.service.ts:924:34\n\n  921 \n  922 await this.checkOTPRateLimit(email);\n  923 \n→ 924 let user = await prisma.user.findUnique(\nServer has closed the connection.","code":"INTERNAL_SERVER_ERROR"}}

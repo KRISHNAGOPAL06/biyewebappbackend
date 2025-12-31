@@ -1,0 +1,577 @@
+openapi: 3.0.3
+info:
+  title: Biye Matrimonial - Connections API
+  version: 1.0.0
+  description: |
+    Connections system for sending interests, accepting/declining, and managing matches.
+    
+    **Features:**
+    - Send interest (like)
+    - Accept/Decline interest
+    - Withdraw sent interest
+    - List sent/received interests
+    - List mutual matches
+    - Rate limiting (20 interests per day)
+    - Idempotency support for all POST endpoints
+
+servers:
+  - url: http://localhost:3000/api/v1
+    description: Development server
+  - url: https://api.biye.example.com/api/v1
+    description: Production server
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      schema:
+        type: string
+        format: uuid
+      description: |
+        Optional UUID for idempotent requests. If provided, duplicate requests 
+        with the same key within 10 minutes will return the cached response.
+        Recommended for all POST endpoints to prevent duplicate actions.
+
+  schemas:
+    SendInterestRequest:
+      type: object
+      required:
+        - toUserId
+      properties:
+        toUserId:
+          type: string
+          format: uuid
+          description: ID of the user to send interest to
+
+    AcceptInterestRequest:
+      type: object
+      required:
+        - fromUserId
+      properties:
+        fromUserId:
+          type: string
+          format: uuid
+          description: ID of the user who sent the interest
+
+    DeclineInterestRequest:
+      type: object
+      required:
+        - fromUserId
+      properties:
+        fromUserId:
+          type: string
+          format: uuid
+          description: ID of the user who sent the interest
+
+    WithdrawInterestRequest:
+      type: object
+      required:
+        - toUserId
+      properties:
+        toUserId:
+          type: string
+          format: uuid
+          description: ID of the user the interest was sent to
+
+    InterestResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [pending, accepted, declined, withdrawn]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    AcceptInterestResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [accepted]
+        isMatch:
+          type: boolean
+          description: True if both users have accepted each other's interest
+        updatedAt:
+          type: string
+          format: date-time
+
+    SentInterest:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        toUserId:
+          type: string
+          format: uuid
+        toUser:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            email:
+              type: string
+            createdAt:
+              type: string
+              format: date-time
+        status:
+          type: string
+          enum: [pending, accepted]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ReceivedInterest:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        fromUserId:
+          type: string
+          format: uuid
+        fromUser:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            email:
+              type: string
+            createdAt:
+              type: string
+              format: date-time
+        status:
+          type: string
+          enum: [pending, accepted]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Match:
+      type: object
+      properties:
+        matchedUserId:
+          type: string
+          format: uuid
+        matchedUser:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            email:
+              type: string
+            createdAt:
+              type: string
+              format: date-time
+        matchedAt:
+          type: string
+          format: date-time
+          description: Timestamp of when both users accepted (latest of the two)
+
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+        message:
+          type: string
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          properties:
+            message:
+              type: string
+            code:
+              type: string
+
+paths:
+  /connections/interest:
+    post:
+      summary: Send interest to another user
+      description: |
+        Send interest (like) to another user's profile.
+        
+        **Business Rules:**
+        - Cannot send interest to yourself
+        - Must have a published profile
+        - Target profile must be published
+        - Rate limit: 20 interests per day
+        - If interest already exists with status=pending, returns existing
+        - If interest was declined/withdrawn, updates status back to pending
+        
+        **Idempotency:**
+        - Use `Idempotency-Key` header to prevent duplicate sends
+        - Cached for 10 minutes
+      operationId: sendInterest
+      security:
+        - BearerAuth: []
+      tags:
+        - Connections
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendInterestRequest'
+      responses:
+        '201':
+          description: Interest sent successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/InterestResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                selfInterest:
+                  value:
+                    success: false
+                    error:
+                      message: "Cannot send interest to yourself"
+                      code: "INVALID_REQUEST"
+                unpublished:
+                  value:
+                    success: false
+                    error:
+                      message: "You must have a published profile to send interests"
+                      code: "PROFILE_NOT_PUBLISHED"
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error:
+                  message: "LIMIT_REACHED: You have reached your daily limit of 20 interests. Remaining: 0"
+                  code: "RATE_LIMIT_EXCEEDED"
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /connections/interest/accept:
+    post:
+      summary: Accept a received interest
+      description: |
+        Accept an interest sent to you by another user.
+        
+        **Business Rules:**
+        - Only receiver can accept
+        - Interest must have status=pending
+        - Detects mutual match if both users have accepted each other
+        
+        **Response includes:**
+        - `isMatch: true` if both users accepted each other
+        - `isMatch: false` if only one-sided acceptance
+      operationId: acceptInterest
+      security:
+        - BearerAuth: []
+      tags:
+        - Connections
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AcceptInterestRequest'
+      responses:
+        '200':
+          description: Interest accepted successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/AcceptInterestResponse'
+              examples:
+                mutualMatch:
+                  value:
+                    success: true
+                    data:
+                      id: "uuid"
+                      status: "accepted"
+                      isMatch: true
+                      updatedAt: "2025-11-22T10:00:00Z"
+                    message: "Interest accepted successfully"
+                oneSided:
+                  value:
+                    success: true
+                    data:
+                      id: "uuid"
+                      status: "accepted"
+                      isMatch: false
+                      updatedAt: "2025-11-22T10:00:00Z"
+                    message: "Interest accepted successfully"
+        '400':
+          description: Interest not found or invalid status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /connections/interest/decline:
+    post:
+      summary: Decline a received interest
+      description: |
+        Decline an interest sent to you by another user.
+        
+        **Business Rules:**
+        - Only receiver can decline
+        - Interest must have status=pending
+      operationId: declineInterest
+      security:
+        - BearerAuth: []
+      tags:
+        - Connections
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeclineInterestRequest'
+      responses:
+        '200':
+          description: Interest declined successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/InterestResponse'
+        '400':
+          description: Interest not found or invalid status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /connections/interest/withdraw:
+    post:
+      summary: Withdraw a sent interest
+      description: |
+        Withdraw an interest you sent to another user.
+        
+        **Business Rules:**
+        - Only sender can withdraw
+        - Idempotent: withdrawing already withdrawn interest returns success
+      operationId: withdrawInterest
+      security:
+        - BearerAuth: []
+      tags:
+        - Connections
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WithdrawInterestRequest'
+      responses:
+        '200':
+          description: Interest withdrawn successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/InterestResponse'
+        '400':
+          description: Interest not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden (not sender)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /connections/interests/sent:
+    get:
+      summary: List interests sent by user
+      description: |
+        Retrieve all interests sent by the authenticated user.
+        Includes only pending and accepted interests.
+      operationId: getSentInterests
+      security:
+        - BearerAuth: []
+      tags:
+        - Connections
+      responses:
+        '200':
+          description: Sent interests retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/SentInterest'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /connections/interests/received:
+    get:
+      summary: List interests received by user
+      description: |
+        Retrieve all interests received by the authenticated user.
+        Includes only pending and accepted interests.
+      operationId: getReceivedInterests
+      security:
+        - BearerAuth: []
+      tags:
+        - Connections
+      responses:
+        '200':
+          description: Received interests retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/ReceivedInterest'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /connections/matches:
+    get:
+      summary: List mutual matches
+      description: |
+        Retrieve all mutual matches where both users have accepted each other's interest.
+        
+        **Algorithm:**
+        - Find all interests where user sent AND status=accepted
+        - Find all interests where user received AND status=accepted
+        - Filter for pairs where BOTH directions are accepted
+        - Return unique matches with latest acceptance timestamp
+      operationId: getMatches
+      security:
+        - BearerAuth: []
+      tags:
+        - Connections
+      responses:
+        '200':
+          description: Matches retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Match'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+tags:
+  - name: Connections
+    description: Interest-based connections and matchmaking

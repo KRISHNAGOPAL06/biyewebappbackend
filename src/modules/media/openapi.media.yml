@@ -1,0 +1,440 @@
+openapi: 3.0.3
+info:
+  title: Biye Matrimonial - Media API
+  version: 1.0.0
+  description: Secure media upload and management API with moderation support
+
+servers:
+  - url: http://localhost:3000/api/v1
+    description: Development server
+  - url: https://api.biye.example.com/api/v1
+    description: Production server
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT access token obtained from authentication endpoints
+
+    ModerationSecret:
+      type: apiKey
+      in: header
+      name: X-Moderation-Secret
+      description: Secret key for moderation callback authentication
+
+  schemas:
+    CreateUploadUrlRequest:
+      type: object
+      required:
+        - profileId
+        - filename
+        - mimeType
+        - fileSize
+        - privacyLevel
+      properties:
+        profileId:
+          type: string
+          format: uuid
+          description: UUID of the profile to upload photo to
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        filename:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: Original filename
+          example: "profile-photo.jpg"
+        mimeType:
+          type: string
+          enum: [image/jpeg, image/png, image/webp, image/avif]
+          description: MIME type of the image
+          example: "image/jpeg"
+        fileSize:
+          type: integer
+          minimum: 1
+          maximum: 5242880
+          description: File size in bytes (max 5MB)
+          example: 1048576
+        privacyLevel:
+          type: string
+          enum: [public, matches, on_request, private]
+          description: Privacy level for the photo
+          example: "public"
+
+    UploadUrlResponse:
+      type: object
+      properties:
+        uploadUrl:
+          type: string
+          format: uri
+          description: Signed URL for direct upload to S3/Cloudinary
+          example: "https://bucket.s3.amazonaws.com/profiles/..."
+        objectKey:
+          type: string
+          description: Object key for tracking the upload
+          example: "profiles/550e8400-e29b-41d4-a716-446655440000/abc123_profile-photo.jpg"
+        expiresIn:
+          type: integer
+          description: URL expiry time in seconds
+          example: 300
+        uploadMethod:
+          type: string
+          enum: [PUT, POST]
+          description: HTTP method to use for upload
+          example: "PUT"
+        photoId:
+          type: string
+          format: uuid
+          description: UUID of the created photo metadata record
+          example: "660e8400-e29b-41d4-a716-446655440001"
+
+    ModerationCallbackRequest:
+      type: object
+      required:
+        - objectKey
+        - status
+      properties:
+        objectKey:
+          type: string
+          description: Object key of the photo being moderated
+          example: "profiles/550e8400-e29b-41d4-a716-446655440000/abc123_profile-photo.jpg"
+        status:
+          type: string
+          enum: [approved, rejected]
+          description: Moderation decision
+          example: "approved"
+        finalUrl:
+          type: string
+          format: uri
+          description: Final CDN URL (required if approved)
+          example: "https://cdn.example.com/photos/optimized-photo.jpg"
+        fileSize:
+          type: integer
+          description: Actual file size after upload
+          example: 1048576
+        mimeType:
+          type: string
+          description: Verified MIME type
+          example: "image/jpeg"
+        note:
+          type: string
+          description: Moderation note (e.g., rejection reason)
+          example: "Image contains inappropriate content"
+
+    PhotoMetadata:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Photo UUID
+          example: "660e8400-e29b-41d4-a716-446655440001"
+        profileId:
+          type: string
+          format: uuid
+          description: Profile UUID
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        objectKey:
+          type: string
+          nullable: true
+          description: Storage object key
+          example: "profiles/550e8400-e29b-41d4-a716-446655440000/abc123_profile-photo.jpg"
+        url:
+          type: string
+          format: uri
+          nullable: true
+          description: Public CDN URL (null until approved)
+          example: "https://cdn.example.com/photos/optimized-photo.jpg"
+        fileSize:
+          type: integer
+          nullable: true
+          description: File size in bytes
+          example: 1048576
+        mimeType:
+          type: string
+          nullable: true
+          description: MIME type
+          example: "image/jpeg"
+        privacyLevel:
+          type: string
+          description: Privacy level
+          example: "public"
+        moderationStatus:
+          type: string
+          enum: [pending, approved, rejected]
+          description: Current moderation status
+          example: "approved"
+        moderationNote:
+          type: string
+          nullable: true
+          description: Moderation note
+          example: null
+        createdAt:
+          type: string
+          format: date-time
+          description: Creation timestamp
+          example: "2025-11-22T10:00:00Z"
+        uploadedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Upload completion timestamp
+          example: "2025-11-22T10:05:00Z"
+
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+        message:
+          type: string
+          example: "Operation successful"
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          properties:
+            message:
+              type: string
+              example: "Error message"
+            code:
+              type: string
+              example: "ERROR_CODE"
+            details:
+              type: object
+
+paths:
+  /media/upload-url:
+    post:
+      summary: Request signed upload URL
+      description: |
+        Generate a signed URL for direct browser upload to S3/Cloudinary.
+        Validates MIME type, file size, and user authorization.
+        Creates pending photo metadata record.
+      operationId: createUploadUrl
+      security:
+        - BearerAuth: []
+      tags:
+        - Media
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUploadUrlRequest'
+      responses:
+        '201':
+          description: Upload URL created successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/UploadUrlResponse'
+        '400':
+          description: Validation error (invalid MIME type, oversized, etc.)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized (missing or invalid token)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden (not profile owner)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /media/{photoId}:
+    get:
+      summary: Get photo metadata
+      description: |
+        Retrieve photo metadata by ID.
+        Respects privacy levels and moderation status.
+        Returns null URL for pending/rejected photos (non-owners).
+      operationId: getPhotoById
+      tags:
+        - Media
+      parameters:
+        - name: photoId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Photo UUID
+      responses:
+        '200':
+          description: Photo retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/PhotoMetadata'
+        '404':
+          description: Photo not found or no permission
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      summary: Delete photo metadata
+      description: |
+        Soft-delete photo (sets deletedAt timestamp).
+        Enqueues background job to delete object from S3/Cloudinary.
+        Owner-only operation.
+      operationId: deletePhoto
+      security:
+        - BearerAuth: []
+      tags:
+        - Media
+      parameters:
+        - name: photoId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Photo UUID
+      responses:
+        '200':
+          description: Photo deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden (not owner)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Photo not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /profiles/{profileId}/photos:
+    get:
+      summary: List profile photos
+      description: |
+        List all photos for a profile.
+        Filters based on requester permissions and privacy levels.
+        Only shows approved photos to non-owners.
+      operationId: listProfilePhotos
+      tags:
+        - Media
+        - Profiles
+      parameters:
+        - name: profileId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Profile UUID
+      responses:
+        '200':
+          description: Photos retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/PhotoMetadata'
+
+  /media/moderation/callback:
+    post:
+      summary: Moderation callback webhook
+      description: |
+        Webhook endpoint for moderation worker or 3rd-party service.
+        Updates photo status and final URL after moderation.
+        Protected by X-Moderation-Secret header (HMAC validation).
+      operationId: moderationCallback
+      security:
+        - ModerationSecret: []
+      tags:
+        - Moderation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModerationCallbackRequest'
+      responses:
+        '200':
+          description: Moderation callback processed successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          success:
+                            type: boolean
+                            example: true
+        '401':
+          description: Missing X-Moderation-Secret header
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Invalid moderation secret
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Photo not found for given objectKey
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+tags:
+  - name: Media
+    description: Photo upload and management endpoints
+  - name: Moderation
+    description: Moderation callback endpoints
+  - name: Profiles
+    description: Profile-related endpoints

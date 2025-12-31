@@ -1,0 +1,450 @@
+openapi: 3.0.0
+info:
+  title: Biye Notification API
+  description: Real-time notifications with push support via Firebase Cloud Messaging (FCM)
+  version: 1.0.0
+servers:
+  - url: http://localhost:3000/api/v1
+    description: Development server
+  - url: https://api.biye.com/api/v1
+    description: Production server
+
+paths:
+  /notifications:
+    get:
+      summary: List notifications
+      description: Get paginated list of notifications for authenticated user
+      tags:
+        - Notifications
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+          description: Page number (1-indexed)
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+          description: Items per page
+        - name: unreadOnly
+          in: query
+          schema:
+            type: boolean
+            default: false
+          description: Show only unread notifications
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum:
+              - otp
+              - interest_received
+              - interest_accepted
+              - new_message
+              - profile_view
+              - guardian_added
+              - subscription
+              - moderation
+          description: Filter by notification type
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      notifications:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Notification'
+                      pagination:
+                        $ref: '#/components/schemas/Pagination'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /notifications/unread-count:
+    get:
+      summary: Get unread notification count
+      tags:
+        - Notifications
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      unreadCount:
+                        type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /notifications/{id}/read:
+    patch:
+      summary: Mark notification as read
+      tags:
+        - Notifications
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Notification'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /notifications/read-all:
+    patch:
+      summary: Mark all notifications as read
+      tags:
+        - Notifications
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      markedCount:
+                        type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /notifications/preferences:
+    get:
+      summary: Get notification preferences
+      description: Retrieve user's notification channel preferences (email, push, in-app)
+      tags:
+        - Preferences
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/NotificationPreference'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    patch:
+      summary: Update notification preferences
+      description: |
+        Update which channels user receives notifications on.
+        
+        - emailEnabled: Receive notifications via email
+        - pushEnabled: Receive push notifications via FCM
+        - inAppEnabled: Receive in-app notifications
+      tags:
+        - Preferences
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                emailEnabled:
+                  type: boolean
+                pushEnabled:
+                  type: boolean
+                inAppEnabled:
+                  type: boolean
+              example:
+                emailEnabled: false
+                pushEnabled: true
+                inAppEnabled: true
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/NotificationPreference'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /notifications/device-token:
+    post:
+      summary: Register device token for push notifications
+      description: |
+        Save or update FCM device token for the authenticated user.
+        
+        Call this endpoint when:
+        - User first installs your mobile app (get FCM token)
+        - User logs in on a new device
+        - FCM token is refreshed
+        
+        The same user can have multiple devices registered.
+      tags:
+        - Device Tokens
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                token:
+                  type: string
+                  description: Firebase Cloud Messaging device token
+              required:
+                - token
+              example:
+                token: "d5-sZtd-1nB0d6qF-E9K7mL-pQ2wX3yZ9aB5cD8eF..."
+      responses:
+        '200':
+          description: Device token saved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      userId:
+                        type: string
+                        format: uuid
+                      token:
+                        type: string
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /notifications/device-token/{token}:
+    delete:
+      summary: Delete device token
+      description: Unregister a device token. User will no longer receive push notifications on that device.
+      tags:
+        - Device Tokens
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+          description: FCM device token to delete
+      responses:
+        '200':
+          description: Device token deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+components:
+  schemas:
+    Notification:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum:
+            - otp
+            - interest_received
+            - interest_accepted
+            - new_message
+            - profile_view
+            - guardian_added
+            - subscription
+            - moderation
+        title:
+          type: string
+          example: "You have a new interest!"
+        body:
+          type: string
+          example: "Sarah has shown interest in your profile"
+        isRead:
+          type: boolean
+        deliveredAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+
+    NotificationPreference:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        emailEnabled:
+          type: boolean
+          description: Receive notifications via email
+        pushEnabled:
+          type: boolean
+          description: Receive push notifications via FCM
+        inAppEnabled:
+          type: boolean
+          description: Receive in-app notifications
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        totalPages:
+          type: integer
+
+  responses:
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                default: false
+              error:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    default: "Unauthorized"
+                  code:
+                    type: string
+                    default: "UNAUTHORIZED"
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                default: false
+              error:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    default: "Not found"
+
+    ValidationError:
+      description: Validation failed
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                default: false
+              error:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    default: "Validation failed"
+                  code:
+                    type: string
+                    default: "VALIDATION_ERROR"
+                  details:
+                    type: object
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

@@ -1,0 +1,223 @@
+🧠 MODULE 2 — BACKEND ONLY — PROFILE SYSTEM (DRAFT → STEPS → PUBLISH)
+⚠️ IMPORTANT:
+Do NOT install dependencies.
+Do NOT run Prisma migrate.
+Do NOT run tests.
+Do NOT touch frontend.
+ONLY modify backend files.
+
+GOAL
+
+Implement the complete Profile System including:
+
+Profile draft creation
+
+Step-by-step Profile Wizard updates
+
+Completeness meter
+
+Photo metadata linking
+
+Partner Preferences model
+
+Profile masking rules (public vs logged-in vs guardian)
+
+Publish & Unpublish flow
+
+Fully validated Zod DTOs
+
+Prisma schema expansion
+
+Unit test files (not executed)
+
+OpenAPI docs for Profile endpoints
+
+📌 FILES TO CREATE/MODIFY
+/backend/src/modules/profile/
+  profile.routes.ts
+  profile.controller.ts
+  profile.service.ts
+  profile.dto.ts
+  profile.permissions.ts   # masking + access rules
+  completeness.service.ts  # completeness calculation
+  profile.test.ts          # do NOT run tests
+
+/backend/src/middleware/authMiddleware.ts  # reuse for protected routes
+
+📌 PRISMA SCHEMA CHANGES (DO NOT MIGRATE)
+
+Append these models:
+
+model Profile {
+  id            String     @id @default(uuid())
+  userId        String     @unique
+  displayName   String
+  headline      String?
+  about         String?
+  gender        String?
+  dob           DateTime?
+  location      Json?
+  preferences   Preference?
+  published     Boolean    @default(false)
+  completeness  Int        @default(0)
+  photos        Photo[]
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  deletedAt     DateTime?
+  user          User       @relation(fields: [userId], references: [id])
+}
+
+model Photo {
+  id               String    @id @default(uuid())
+  profileId        String
+  objectKey        String?
+  url              String?
+  fileSize         Int?
+  privacyLevel     String    @default("public")
+  moderationStatus String    @default("pending")
+  createdAt        DateTime  @default(now())
+  profile          Profile   @relation(fields: [profileId], references: [id])
+}
+
+model Preference {
+  id          String   @id @default(uuid())
+  profileId   String   @unique
+  basic       Json?
+  lifestyle   Json?
+  education   Json?
+  community   Json?
+  location    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  profile     Profile  @relation(fields: [profileId], references: [id])
+}
+
+📌 ENDPOINTS TO IMPLEMENT
+1️⃣ POST /api/v1/profiles
+
+Create new profile draft for authenticated user.
+
+2️⃣ GET /api/v1/profiles/me
+
+Return user’s profile (draft or published).
+
+3️⃣ PATCH /api/v1/profiles/:id/step
+
+Dynamic step update.
+Supported steps:
+
+about
+
+demographics
+
+family
+
+lifestyle
+
+location
+
+photos-metadata
+
+preferences
+
+Each validated via appropriate Zod schema.
+
+4️⃣ POST /api/v1/profiles/:id/publish
+
+Check required fields:
+
+displayName
+
+gender
+
+dob
+
+location
+
+at least 1 photo uploaded
+
+about text
+
+headline
+
+If incomplete → return detailed error list.
+
+5️⃣ POST /api/v1/profiles/:id/unpublish
+
+Mark published=false.
+
+6️⃣ GET /api/v1/profiles/:id
+
+Public profile view → masked fields unless:
+
+owner
+
+guardian with access
+
+premium user (later)
+
+Mask rules in profile.permissions.ts.
+
+📌 FUNCTIONALITY DETAILS
+✔️ Completeness Calculation
+
+Implement in completeness.service.ts:
+
+Each completed section increases score (0–100).
+
+✔️ Masking Rules
+
+Inside profile.permissions.ts:
+
+Visitors cannot see:
+
+contact info
+
+private photos
+
+specific fields until plan unlock
+
+on-request photos
+
+Implement clean helper:
+
+export function maskProfile(requester, profile)
+
+✔️ Security Rules
+
+Owner check always server-side
+
+Zod validation everywhere
+
+No PII leakage (email/phone only returned in /me)
+
+Soft delete supported
+
+📌 UNIT TESTS (GENERATE ONLY)
+
+test profile draft creation
+
+test step update validation
+
+test publish requirement failures
+
+test masking rules
+
+test completeness calculation
+
+📌 DO NOT DO
+
+❌ do NOT install deps
+❌ do NOT run prisma migrate
+❌ do NOT modify frontend
+❌ do NOT run tests
+
+📌 RESPOND WITH
+
+file tree
+
+all created/updated TS files
+
+updated Prisma schema
+
+OpenAPI docs for all Profile endpoints

@@ -1,0 +1,404 @@
+🧠 MODULE 6 — BACKEND ONLY — CHAT & REAL-TIME MESSAGING (Socket.IO + Persistence)
+ IMPORTANT (read before pasting):
+Do NOT run npm install, prisma migrate, or any shell commands in Replit.
+
+
+Do NOT connect to Redis, AWS, or any external service from Replit.
+
+
+Do NOT modify or regenerate unrelated modules.
+
+
+ONLY create/modify backend files listed below (code, tests, OpenAPI).
+
+
+The agent should not execute tests, start servers, or install dependencies.
+
+
+
+🎯 Goal
+Add a secure, scalable Chat service that supports:
+Socket.IO gateway with JWT auth handshake
+
+
+Message persistence (Message + Thread models)
+
+
+Thread creation when mutual match occurs
+
+
+Delivery receipts and read receipts
+
+
+Per-socket and per-user rooms
+
+
+Redis adapter readiness (adapter init behind flag; do not connect)
+
+
+Rate limiting per socket (anti-spam)
+
+
+Profanity filter stub (injectable)
+
+
+Block/report integration hooks (respect block list)
+
+
+REST endpoints for threads & history (cursor pagination)
+
+
+Event stubs to integrate with Notifications module (enqueue notifications)
+
+
+Tests (unit/socket) — generate only, do not run
+
+
+OpenAPI docs for REST endpoints
+
+
+Everything must be privacy-aware and use existing auth middleware.
+
+📁 Files to create / modify
+Agent should create these files under /backend only:
+/backend/src/modules/chat/
+  chat.gateway.ts            # Socket.IO attach function and auth handshake
+  chat.controller.ts         # REST endpoints for threads & history
+  chat.routes.ts
+  chat.service.ts            # handle persistence + emit + receipts
+  chat.dto.ts                # zod schemas for REST endpoints
+  chat.types.ts              # shared types/interfaces
+  profanity.service.ts       # stub with function isClean(text): boolean
+  chat.test.ts               # tests (do NOT run)
+  openapi.chat.yml           # OpenAPI for chat REST APIs
+
+
+/backend/src/prisma/        # (only update schema.prisma; do NOT migrate)
+  schema.prisma             # append Message & Thread models (see below)
+
+
+/backend/src/utils/
+  socketRateLimit.ts         # per-socket rate limiter (token-bucket stub using Redis)
+  presence.service.ts        # stub for online presence (uses Redis if configured)
+  sanitizer.ts               # message sanitization / escape helper
+
+Also ensure integration points exist:
+events.emit(...) usage stubs for sending notifications
+
+
+Use existing logger and requestId middleware for all log calls.
+
+
+
+🧬 Prisma schema additions (append — DO NOT MIGRATE here)
+Add these models to your schema.prisma:
+model Thread {
+  id            String   @id @default(uuid())
+  participants  String[] // array of userIds (Postgres text[])
+  lastMsgAt     DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  messages      Message[]
+}
+
+
+model Message {
+  id          String   @id @default(uuid())
+  threadId    String
+  fromUserId  String
+  toUserId    String?   // nullable for group threads
+  content     String
+  metadata    Json?
+  delivered   Boolean  @default(false)
+  read        Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+
+  thread      Thread   @relation(fields: [threadId], references: [id])
+}
+
+Notes:
+participants as String[] is Postgres-specific; include a code comment for alternative JSON storage if DB doesn't support arrays.
+
+
+Consider partitioning messages in future by date for scale; add comment in schema file.
+
+
+
+🔌 Socket.IO gateway behavior (chat.gateway.ts)
+Export attachChat(io: Server, opts?: { redisOptions?, enableRedisAdapter?: boolean }).
+
+
+Handshake authentication:
+
+
+Client connects using auth: { token: "<accessToken>" }.
+
+
+Verify JWT via same authenticateToken logic (use token service).
+
+
+On successful auth, set socket.data.userId = userId.
+
+
+Join socket to room user:<userId>.
+
+
+Rooms & events:
+
+
+socket.join('user:'+userId)
+
+
+socket.on('private_message', async (payload) => {...}) where payload: { threadId?, toUserId, content, metadata? }
+
+
+If threadId provided: ensure user is participant; else create a new thread if allowed (e.g., mutual match precondition should be checked by chat.service).
+
+
+Persist message with chat.service.saveMessage(...)
+
+
+Emit to recipient room: io.to('user:'+toUserId).emit('message', sanitizedMessage)
+
+
+Emit delivery receipt if recipient online; otherwise mark delivered=false; enqueue notification stub.
+
+
+Rate limiting:
+
+
+Apply socketRateLimit per socket (e.g., 10 messages / 10s).
+
+
+If exceeded, emit rate_limited and drop message.
+
+
+Profanity & sanitizer:
+
+
+Before saving, run profanity.service.isClean(content); if false, optionally tag message metadata.moderation = "flagged" and enqueue moderation.
+
+
+Redis adapter readiness:
+
+
+If opts.enableRedisAdapter true and redisOptions supplied, init adapter (but do NOT try to connect in Replit). Provide commented code with createAdapter(redisClient) example.
+
+
+Presence:
+
+
+On connect → presence.service.markOnline(userId, socketId)
+
+
+On disconnect → presence.service.markOffline(userId, socketId)
+
+
+Heartbeat & reconnection handling: add comment and simple ping/pong implementation.
+
+
+
+🔁 REST endpoints (chat.controller.ts & chat.routes.ts)
+All endpoints under /api/v1/chats:
+GET /api/v1/chats/threads
+
+
+Query: ?cursor=<cursor>&limit=20
+
+
+Returns list of threads the user participates in (with lastMsg & participants preview).
+
+
+Uses cursor pagination based on Thread.lastMsgAt + id.
+
+
+GET /api/v1/chats/threads/:threadId
+
+
+Protected. Return thread metadata and participants (no message content unless participant).
+
+
+GET /api/v1/chats/threads/:threadId/messages
+
+
+Query: ?cursor=&limit=
+
+
+Return messages for thread (cursor / time-based pagination), sanitized & masked according to privacy (if profile-deleted etc).
+
+
+POST /api/v1/chats/threads
+
+
+Create thread (server-side check: only allow if users allowed to chat — e.g., mutual match or premium; for now, require a canCreateThread check in chat.service which returns true only if mutual match exists, but allow override by admin).
+
+
+Body: { participantIds: [ "userA", "userB" ] }
+
+
+Return created thread.
+
+
+POST /api/v1/chats/threads/:threadId/read
+
+
+Mark messages up to timestamp/id as read for the user; update DB and emit read_receipt to other participant(s).
+
+
+Security:
+All endpoints require JWT auth and owner participation checks. Use authenticateToken middleware.
+
+
+Validate inputs via Zod.
+
+
+
+🧾 chat.service.ts responsibilities
+saveMessage({ threadId?, fromUserId, toUserId, content, metadata }):
+
+
+Validate participants
+
+
+Create thread if needed
+
+
+Persist message
+
+
+Update Thread.lastMsgAt
+
+
+Emit to recipient via socket (if online)
+
+
+Mark delivered true if recipient online else false
+
+
+Enqueue notification via events.emit('notification', {...})
+
+
+getThreads(userId, cursor, limit) — cursor-based threads list
+
+
+getMessages(threadId, cursor, limit) — cursor-based messages
+
+
+markAsRead(threadId, userId, uptoMessageId) — update messages read, emit receipt
+
+
+createThread(participants) — create unique thread for pair (idempotent)
+
+
+canUserChat(userA, userB) — check mutual match & not blocked (stub calls to connections/report modules)
+
+
+
+🛡️ Security & Hardening (must implement)
+SANITIZE content for XSS (use sanitizer.ts) before persisting and before emitting to other clients.
+
+
+Escape or strip HTML tags.
+
+
+Rate-limit socket sends and socket connection attempts (auth attempts) per IP.
+
+
+Use helmet and CORS for REST endpoints already in base.
+
+
+Never include tokens or private PII in events.
+
+
+All sensitive logs must redact message content if flagged sensitive (configurable).
+
+
+On suspicious behavior (token reuse, many failed auth attempts), log audit event and increment risk counter for user (future blocking).
+
+
+
+🧪 Tests (generate only; DO NOT RUN)
+Unit tests for chat.service.saveMessage (mock prisma + socket emitter).
+
+
+Socket handshake test: simulate client connect with token and verify room join (use socket.io-client in Jest environment but do not run in Replit).
+
+
+markAsRead flow test ensuring DB update and emission.
+
+
+
+📘 OpenAPI
+Create openapi.chat.yml documenting REST endpoints above, example payloads, security (Bearer auth), and possible errors:
+403 if not participant
+
+
+429 if rate-limited
+
+
+400 for bad input
+
+
+
+🖥️ Local manual steps (after agent writes files)
+Run all of these locally (NOT in Replit):
+Install libs locally:
+
+
+# socket.io + redis adapter + client libs
+npm install socket.io socket.io-client socket.io-redis ioredis
+# or with aws-sdk if you need later—do only what's required locally
+
+Generate Prisma client and migrate:
+
+
+npx prisma generate
+npx prisma migrate dev --name chat_models
+
+Start backend (ensure Redis & Postgres running in docker compose):
+
+
+npm run dev
+
+Local smoke tests:
+
+
+Connect via a socket.io test client (or simple Node script)
+
+
+Authenticate handshake: io("http://localhost:5001", { auth: { token: "<accessToken>" } })
+
+
+Emit private_message → ensure REST history updated
+
+
+Call REST message listing endpoints to confirm persistence
+
+
+
+✅ What to ask Replit Agent to return
+When the agent finishes, have it output:
+File tree of created/modified files.
+
+
+Full content for each new/modified file.
+
+
+openapi.chat.yml content.
+
+
+A single-line confirmation: “No installs, migrations, or network calls were executed by the agent.”
+
+
+
+Final notes / best practices
+Keep Socket.IO adapter init commented in Replit code with an if (process.env.ENABLE_SOCKET_REDIS === "true") guard so you can enable it locally when ready.
+
+
+For scale later, use socket.io + Redis adapter + sticky sessions or a message broker (Kafka/RabbitMQ) to distribute events.
+
+
+For very large deployments, move message writes to a write-optimized store (timeseries or partitioned Postgres); keep latest N in main DB and archive older ones.
+
+

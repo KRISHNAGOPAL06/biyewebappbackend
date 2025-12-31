@@ -1,0 +1,5 @@
+# Uploaded vendor files
+files/*
+
+# Keep directory but ignore files
+!files/.gitkeep

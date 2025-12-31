@@ -1,0 +1,141 @@
+🧠 UPDATE NOTIFICATION SYSTEM — IMPLEMENT REAL PUSH NOTIFICATIONS WITH FCM
+
+⚠ DO NOT regenerate previous Notification module
+⚠ DO NOT modify modules unrelated to Notifications
+⚠ DO NOT run package installations automatically
+
+📌 Step 1: Add Dependencies (but DO NOT install automatically)
+
+Generate code assuming the user will install packages manually:
+
+npm install firebase-admin
+
+
+Do NOT run this inside the AI — just document it in the output.
+
+📌 Step 2: Create or update files ONLY inside:
+/backend/src/modules/notifications/
+
+📌 Step 3: Implement push notification delivery using Firebase Cloud Messaging
+
+Create a new file:
+
+fcm.client.ts
+
+
+Contents:
+
+import admin from "firebase-admin";
+import { getEnv } from "../../utils/env"; // if exists
+
+let initialized = false;
+
+export function initFCM() {
+  if (initialized) return;
+  try {
+    admin.initializeApp({
+      credential: admin.credential.cert({
+        projectId: process.env.FCM_PROJECT_ID,
+        clientEmail: process.env.FCM_CLIENT_EMAIL,
+        privateKey: process.env.FCM_PRIVATE_KEY?.replace(/\\n/g, "\n"),
+      }),
+    });
+    initialized = true;
+  } catch (err) {
+    console.warn("⚠ FCM not initialized — missing/invalid credentials");
+  }
+}
+
+export async function sendPushNotification(fcmToken: string, title: string, body: string, metadata: any = {}) {
+  initFCM();
+  if (!fcmToken) return;
+  try {
+    await admin.messaging().send({
+      token: fcmToken,
+      notification: { title, body },
+      data: metadata ? Object.fromEntries(
+        Object.entries(metadata).map(([k, v]) => [k, String(v)])
+      ) : {},
+    });
+  } catch (err) {
+    console.error("FCM Push Error:", err);
+  }
+}
+
+📌 Step 4: Device Token Management API
+
+Append to notification.routes.ts:
+
+POST /api/v1/notifications/device-token
+
+
+Create into the same folder:
+
+deviceToken.controller.ts
+deviceToken.service.ts
+
+
+Prisma append only (no auto migration execution!):
+
+model DeviceToken {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+  user      User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId])
+}
+
+
+DeviceToken.service.ts:
+
+export async function saveDeviceToken(userId: string, token: string) {
+  return prisma.deviceToken.upsert({
+    where: { token },
+    create: { userId, token },
+    update: { userId, token },
+  });
+}
+
+
+deviceToken.controller.ts stores token for logged-in user.
+
+📌 Step 5: Integrate Push Notifications into notification.dispatcher.ts
+
+Modify ONLY NotificationDispatcher:
+
+If pushEnabled: true & device tokens exist → send push instantly
+
+If push fails → continue storing notification
+
+Pseudo logic to implement:
+
+if (preferences.pushEnabled) {
+  const tokens = await prisma.deviceToken.findMany({ where: { userId }});
+  for (const t of tokens) {
+    await sendPushNotification(t.token, title, body, payload.metadata);
+  }
+}
+
+📌 Step 6: Add OpenAPI Documentation
+
+Update openapi.notifications.yml to include:
+
+Device token registration endpoint
+
+Push support note
+
+📌 Step 7: Expected Final Output
+
+Agent must return:
+
+Modified/created file contents ONLY
+
+Prisma schema append ONLY
+
+NO migrations or installs run automatically
+
+End with this line:
+
+Push Notifications implemented successfully — no packages installed and no migrations executed automatically.

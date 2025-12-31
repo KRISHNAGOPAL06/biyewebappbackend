@@ -1,0 +1,286 @@
+ async registerSelf(dto: SelfRegistrationDTO): Promise<{ success: boolean; message: string }> {
+    const {
+      lookingFor,
+      creatingFor,
+      gender,
+      dob,
+      city,
+      state,
+      country,
+      email,
+      firstName,
+      lastName,
+      phoneNumber,
+      password
+    } = dto;
+
+    await this.checkOTPRateLimit(email);
+
+    let user = await prisma.user.findUnique({ where: { email } });
+
+    if (user && user.isVerified) {
+      throw new Error('User already exists and is verified. Please login instead.');
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+    const otp = this.generateOTP();
+    const otpHash = await bcrypt.hash(otp, 10);
+    const otpExpiry = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000);
+
+    // Use transaction to create/update user + profile
+    const result = await prisma.$transaction(async (tx) => {
+      // 1️⃣ CREATE OR UPDATE USER (same as your existing logic)
+      const selfUser = user && !user.isVerified
+        ? await tx.user.update({
+          where: { email },
+          data: {
+            role: 'self',
+            lookingFor,
+            firstName,
+            lastName,
+            phoneNumber: phoneNumber || user.phoneNumber,
+            passwordHash,
+            otpHash,
+            otpExpiry,
+            creatingFor,
+          },
+        })
+        : await tx.user.create({
+          data: {
+            role: 'self',
+            lookingFor,
+            firstName,
+            lastName,
+            email,
+            phoneNumber,
+            passwordHash,
+            isVerified: false,
+            otpHash,
+            otpExpiry,
+            creatingFor,
+          },
+        });
+
+      // 2️⃣ CREATE OR UPDATE PROFILE (same style as parentRegister)
+      let profile = await tx.profile.findUnique({
+        where: { userId: selfUser.id },
+      });
+
+      if (!profile) {
+        profile = await tx.profile.create({
+          data: {
+            userId: selfUser.id,
+            gender,
+            dob: new Date(dob),
+            location: {
+              city,
+              state,
+              country,
+            },
+          },
+        });
+      } else {
+        profile = await tx.profile.update({
+          where: { id: profile.id },
+          data: {
+            gender,
+            dob: new Date(dob),
+            location: {
+              city,
+              state,
+              country,
+            },
+          },
+        });
+      }
+
+      return { selfUser, profile };
+    });
+
+    // 3️⃣ Send OTP (unchanged)
+    await emailService.sendOTP(email, otp, 'register');
+    await this.incrementOTPRateLimit(email);
+
+    logger.info('Self-registration with profile creation', {
+      email,
+      profileId: result.profile.id
+    });
+
+    return {
+      success: true,
+      message: 'OTP sent to your email. Please verify to complete registration.',
+    };
+  }
+
+
+  async registerParent(dto: ParentRegistrationDTO): Promise<{ success: boolean; message: string }> {
+    const {
+      parentEmail,
+      parentFirstName,
+      parentLastName,
+      parentPhoneNumber,
+      password,
+      candidateEmail,
+      candidateFirstName,
+      candidateLastName,
+      candidateGender,
+      candidateDob,
+      candidateCity,
+      candidateState,
+      candidateCountry,
+      candidatePhoneNumber,
+      lookingFor,
+      creatingFor,
+    } = dto;
+
+    await this.checkOTPRateLimit(parentEmail);
+
+    const existingParent = await prisma.user.findUnique({
+      where: { email: parentEmail },
+    });
+
+    if (existingParent && existingParent.isVerified) {
+      throw new Error('Email already exists and is verified. Please log in instead.');
+    }
+
+    const existingCandidate = await prisma.user.findUnique({
+      where: { email: candidateEmail },
+    });
+
+    if (existingCandidate && existingCandidate.isVerified) {
+      throw new Error('Candidate email already exists and is verified.');
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+    const otp = this.generateOTP();
+    const otpHash = await bcrypt.hash(otp, 10);
+    const otpExpiry = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000);
+
+    const result = await prisma.$transaction(async (tx) => {
+      const parentUser = existingParent
+        ? await tx.user.update({
+          where: { email: parentEmail },
+          data: {
+            role: 'parent',
+            firstName: parentFirstName,
+            lastName: parentLastName,
+            phoneNumber: parentPhoneNumber,
+            passwordHash,
+            otpHash,
+            otpExpiry,
+            lookingFor,
+            creatingFor,
+          },
+        })
+        : await tx.user.create({
+          data: {
+            role: 'parent',
+            firstName: parentFirstName,
+            lastName: parentLastName,
+            email: parentEmail,
+            phoneNumber: parentPhoneNumber,
+            passwordHash,
+            otpHash,
+            otpExpiry,
+            isVerified: false,
+            lookingFor,
+            creatingFor,
+          },
+        });
+
+      const candidateUser = existingCandidate
+        ? await tx.user.update({
+          where: { email: candidateEmail },
+          data: {
+            role: 'candidate',
+            firstName: candidateFirstName,
+            lastName: candidateLastName,
+            phoneNumber: candidatePhoneNumber,
+          },
+        })
+        : await tx.user.create({
+          data: {
+            role: 'candidate',
+            firstName: candidateFirstName,
+            lastName: candidateLastName,
+            email: candidateEmail,
+            phoneNumber: candidatePhoneNumber,
+            isVerified: false,
+          },
+        });
+
+      let profile = await tx.profile.findUnique({
+        where: { userId: candidateUser.id },
+      });
+
+      if (!profile) {
+        profile = await tx.profile.create({
+          data: {
+            userId: candidateUser.id,
+            gender: candidateGender,
+            dob: new Date(candidateDob),
+            location: {
+              city: candidateCity,
+              state: candidateState,
+              country: candidateCountry,
+            },
+          },
+        });
+      } else {
+        profile = await tx.profile.update({
+          where: { id: profile.id },
+          data: {
+            gender: candidateGender,
+            dob: new Date(candidateDob),
+            location: {
+              city: candidateCity,
+              state: candidateState,
+              country: candidateCountry,
+            },
+          },
+        });
+      }
+
+      const existingLink = await tx.candidateLink.findFirst({
+        where: {
+          profileId: profile.id,
+          parentUserId: parentUser.id,
+          role: 'parent',
+        },
+      });
+
+      if (!existingLink) {
+        await tx.candidateLink.create({
+          data: {
+            profileId: profile.id,
+            parentUserId: parentUser.id,
+            childUserId: candidateUser.id,
+            relationship: creatingFor,
+            role: 'parent',
+            status: 'active',
+          },
+        });
+      }
+
+      return { parentUser, candidateUser, profile };
+    });
+
+    await emailService.sendOTP(parentEmail, otp, 'register');
+    await this.incrementOTPRateLimit(parentEmail);
+
+    await emailService.sendCandidateInvite(candidateEmail, {
+      parentName: `${parentFirstName} ${parentLastName}`,
+      profileId: result.profile.id,
+    });
+
+    logger.info('New parent registration with candidate initiated', {
+      parentEmail,
+      candidateEmail,
+      profileId: result.profile.id
+    });
+
+    return {
+      success: true,
+      message: 'OTP sent to parent email. Candidate has been invited.',
+    };
+  }

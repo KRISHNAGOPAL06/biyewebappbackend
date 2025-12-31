@@ -1,0 +1,211 @@
+🧠 PATCH UPDATE — MODULE 1 (Registration System Enhancements)
+⚠️ Only update existing Module 1 files.
+⚠️ Do NOT regenerate entire module.
+⚠️ Do NOT touch unrelated modules.
+⚠️ Do NOT run migrations or installs.
+⚠️ Modify ONLY the affected code listed below.
+
+🎯 WHAT TO UPDATE
+1. Prisma Schema Updates (APPEND ONLY)
+
+Add these fields to the User & new CandidateLink model:
+
+model User {
+  id             String   @id @default(uuid())
+  role           String   @default("self") // self | parent | guardian | candidate
+  lookingFor     String?  // bride | groom
+  creatingFor    String?  // self | brother | sister | son | daughter | nephew | niece
+  firstName      String?
+  lastName       String?
+  gender         String?
+  dob            DateTime?
+  city           String?
+  state          String?
+  country        String?
+  email          String   @unique
+  phoneNumber    String?
+  passwordHash   String?
+  isVerified     Boolean  @default(false)
+  candidateEmail String?   // parent creates this
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  CandidateLink  CandidateLink?
+}
+
+model CandidateLink {
+  id            String   @id @default(uuid())
+  parentUserId  String
+  candidateEmail String
+  status        String @default("pending") // pending | claimed
+  otpCode       String?
+  otpExpiry     DateTime?
+  createdAt     DateTime @default(now())
+
+  parentUser  User @relation(fields: [parentUserId], references: [id])
+}
+
+
+Do NOT run migration here — only generate code.
+You will later run:
+
+npx prisma generate
+npx prisma migrate dev --name registration_expanded
+
+2. Update Registration DTOs (auth.dto.ts)
+
+Add new Zod schema for BOTH flows:
+
+SELF REGISTRATION
+export const selfRegistrationSchema = z.object({
+  lookingFor: z.enum(["bride", "groom"]),
+  creatingFor: z.literal("self"),
+  firstName: z.string().min(2),
+  lastName: z.string().min(2),
+  gender: z.string(),
+  dob: z.string(),
+  city: z.string(),
+  state: z.string(),
+  country: z.string(),
+  email: z.string().email(),
+  phoneNumber: z.string().optional(),
+  password: z.string().min(8)
+});
+
+PARENT REGISTRATION
+export const parentRegistrationSchema = z.object({
+  lookingFor: z.enum(["bride", "groom"]),
+  creatingFor: z.enum(["brother","sister","son","daughter","nephew","niece"]),
+  
+  // Candidate details
+  firstName: z.string().min(2),
+  lastName: z.string().min(2),
+  gender: z.string(),
+  dob: z.string(),
+  city: z.string(),
+  state: z.string(),
+  country: z.string(),
+
+  // Parent details
+  parentFirstName: z.string().min(2),
+  parentLastName: z.string().min(2),
+  parentEmail: z.string().email(),
+  parentPhone: z.string().optional(),
+  password: z.string().min(8),
+
+  candidateEmail: z.string().email(),
+  candidatePhone: z.string().optional()
+});
+
+3. Update Controller Logic (auth.controller.ts)
+
+Modify the register controller:
+
+Detect if creatingFor === "self" → Self Registration flow
+
+Else → Parent Registration flow
+
+Add:
+
+Self Registration Logic
+if (data.creatingFor === "self") {
+  const user = await authService.registerSelf(data);
+  return res.status(201).json({ success: true, message: "OTP sent to your email" });
+}
+
+Parent Registration Logic
+if (data.creatingFor !== "self") {
+  const user = await authService.registerParent(data);
+  return res.status(201).json({
+    success: true,
+    message: "Parent email verified via OTP. Candidate notified."
+  });
+}
+
+4. Update Service Logic (auth.service.ts)
+
+Add two functions:
+
+registerSelf
+
+Create user
+
+Mark role = "self"
+
+Send OTP to email
+
+Store OTP
+
+registerParent
+
+Create parent user
+role = "parent"
+
+Create candidate shadow account entry:
+candidateEmail = data.candidateEmail
+
+Create CandidateLink record
+
+Send OTP to parent’s email
+
+Send invitation email to candidateEmail (stub only)
+
+No verification required for candidate yet
+
+5. Add Candidate Claim Endpoint
+
+New endpoint in auth.routes.ts:
+
+POST /api/v1/auth/candidate/claim
+POST /api/v1/auth/candidate/verify
+
+candidateClaim
+
+Body:
+
+{ "email": "candidate@example.com" }
+
+
+Server logic:
+
+Check if email exists in CandidateLink
+
+Send OTP to candidate email
+
+Return success message
+
+candidateVerify
+
+Body:
+
+{ "email": "...", "otp": "...", "password": "..." }
+
+
+Server logic:
+
+Validate OTP
+
+Mark CandidateLink.status = "claimed"
+
+Update candidate account with passwordHash
+
+Set role = "candidate"
+
+Set isVerified = true
+
+Issue login tokens
+
+✔ REPLIT SHOULD OUTPUT
+
+Modified Prisma schema section ONLY
+
+Modified DTOs ONLY
+
+Modified controller logic ONLY
+
+Updated service functions ONLY
+
+New candidate claim/verify endpoints
+
+A note saying:
+“No installs, no migrations executed.”

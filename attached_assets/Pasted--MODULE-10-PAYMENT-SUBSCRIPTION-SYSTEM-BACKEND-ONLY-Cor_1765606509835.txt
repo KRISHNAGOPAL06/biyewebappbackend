@@ -1,0 +1,361 @@
+🔷 MODULE 10 — PAYMENT & SUBSCRIPTION SYSTEM (BACKEND ONLY)
+🧠 Core Philosophy (Very Important)
+We will NOT hardcode features in frontend or controllers.
+Instead:
+Plans define entitlements
+
+
+Subscriptions attach entitlements to a PROFILE (not User)
+
+
+All feature checks happen server-side
+
+
+Parents/guardians inherit permissions from profile’s active subscription
+
+
+This prevents:
+Frontend bypass
+
+
+Guardian misuse
+
+
+Chat/message abuse
+
+
+Feature leaks during upgrades/downgrades
+
+
+
+🧩 Domain Model (Conceptual)
+User (login identity)
+   |
+CandidateLink (access rights)
+   |
+Profile (matrimony profile)
+   |
+Subscription (active plan)
+   |
+Entitlements (what actions are allowed)
+
+
+🗃️ PRISMA — SCHEMA (APPEND ONLY)
+⚠️ Append only. Do NOT remove old tables.
+ Migrate locally, not in Replit.
+model Plan {
+  id              String   @id @default(uuid())
+  code            String   @unique // ALAAP, JATRA, AALOK, OBHIJAAT
+  name            String
+  price           Int      // in BDT (৳)
+  durationDays    Int      // 30
+  isInviteOnly    Boolean  @default(false)
+  features        Json     // entitlement definition
+  createdAt       DateTime @default(now())
+}
+
+model Subscription {
+  id            String   @id @default(uuid())
+  profileId     String
+  planId        String
+  status        String   // active | expired | paused | cancelled
+  startAt       DateTime
+  endAt         DateTime
+  pausedUntil   DateTime?
+  createdByUser String   // who paid (parent/candidate)
+  createdAt     DateTime @default(now())
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  plan    Plan    @relation(fields: [planId], references: [id])
+
+  @@index([profileId])
+  @@index([status])
+}
+
+model Payment {
+  id              String   @id @default(uuid())
+  subscriptionId  String?
+  profileId       String
+  gateway         String   // sslcommerz | stripe | bkash | applepay
+  amount          Int
+  currency        String   // BDT
+  status          String   // initiated | success | failed | refunded
+  gatewayTxnId    String?
+  rawResponse     Json?
+  createdAt       DateTime @default(now())
+
+  @@index([profileId])
+}
+
+
+🧠 ENTITLEMENT DESIGN (CRITICAL)
+Each Plan.features is a JSON rulebook, e.g.
+Alaap
+{
+  "photos": 3,
+  "messaging": false,
+  "icebreakersPerMonth": 3,
+  "parentIcebreakers": 3,
+  "filters": ["age", "religion", "district"],
+  "verification": "selfie",
+  "stealth": false,
+  "boosts": 0,
+  "spotlight": 0
+}
+
+Jatra
+{
+  "photos": 6,
+  "messaging": {
+    "newChatsPerMonth": 5,
+    "messagesPerChat": 40
+  },
+  "boosts": 2,
+  "spotlight": 1,
+  "filters": ["education", "profession", "lifestyle"],
+  "verification": "silver"
+}
+
+Aalok
+{
+  "photos": 10,
+  "video": true,
+  "messaging": "unlimited",
+  "stealth": true,
+  "spotlightDays": 3,
+  "pauseAllowed": true,
+  "verification": "gold"
+}
+
+Obhijaat
+{
+  "photos": 12,
+  "video": true,
+  "signatureFeed": true,
+  "founderConsult": true,
+  "aiIntroductions": 3,
+  "familyMessaging": true,
+  "inviteOnly": true
+}
+
+👉 Controllers NEVER check plan name
+ 👉 They call entitlementService.can(profileId, "send_message")
+
+📁 MODULE FILE STRUCTURE
+/backend/src/modules/payments/
+  plan.seed.ts
+  plan.service.ts
+  subscription.service.ts
+  entitlement.service.ts
+  payment.service.ts
+  payment.controller.ts
+  payment.routes.ts
+  webhook.controller.ts
+  gateways/
+    sslcommerz.gateway.ts
+    stripe.gateway.ts
+    bkash.gateway.ts
+    applepay.gateway.ts
+
+
+🌐 API ENDPOINTS
+Plans
+GET /api/v1/plans
+GET /api/v1/plans/:code
+
+Obhijaat should NOT appear unless ?includeInvite=true
+
+
+
+Subscribe (Profile-based)
+POST /api/v1/subscriptions/checkout
+
+Body:
+{
+  "profileId": "uuid",
+  "planCode": "JATRA",
+  "gateway": "sslcommerz"
+}
+
+Backend:
+Validate user has CandidateLink → profile
+
+
+Check invite-only rules
+
+
+Create Payment (initiated)
+
+
+Redirect to gateway / return payment URL
+
+
+
+Webhooks (Critical)
+POST /api/v1/webhooks/sslcommerz
+POST /api/v1/webhooks/stripe
+POST /api/v1/webhooks/bkash
+
+On success:
+Create Subscription
+
+
+Expire old active subscription
+
+
+Emit notification event
+
+
+Enable entitlements immediately
+
+
+
+🔐 ENTITLEMENT SERVICE (MOST IMPORTANT FILE)
+entitlement.service.ts
+can(profileId, action, context?): boolean
+
+Examples:
+send_message
+
+
+start_chat
+
+
+upload_photo
+
+
+view_contact
+
+
+enable_stealth
+
+
+use_boost
+
+
+Controllers must call this before every gated action.
+
+👪 PARENT / GUARDIAN RULES
+Subscription is tied to Profile
+
+
+Parent/guardian inherits same permissions
+
+
+Parent icebreakers count separately only if plan allows
+
+
+Guardian cannot override pause/cancel unless role = parent
+
+
+
+💳 GATEWAYS — IMPLEMENTATION STRATEGY
+SSLCommerz (Primary – Bangladesh)
+Hosted checkout
+
+
+IPN verification
+
+
+Signature validation
+
+
+Stripe / Apple Pay / Visa
+Stripe Payment Intents
+
+
+Apple Pay via Stripe
+
+
+Card payments abstracted
+
+
+bKash
+Tokenized checkout
+
+
+Server-side verification
+
+
+⚠️ NO secrets in code
+ ⚠️ Gateways implemented as adapters (Strategy Pattern)
+
+🔔 EVENTS & NOTIFICATIONS
+Emit events:
+subscription_activated
+
+
+subscription_expired
+
+
+subscription_upgraded
+
+
+payment_failed
+
+
+Handled by Module 8 notifications.
+
+🧪 TEST CASES (MANDATORY)
+Functional
+Alaap → cannot send message
+
+
+Jatra → chat locks after 40 messages
+
+
+Aalok → stealth hides activity
+
+
+Obhijaat → only invite works
+
+
+Security
+Try bypassing frontend → backend blocks
+
+
+Parent cannot activate Obhijaat without invite
+
+
+Guardian cannot cancel subscription
+
+
+Downgrade
+Aalok → Jatra
+
+
+Photos > limit → auto-hide extras
+
+
+Chats remain read-only if over limit
+
+
+
+ ⚠ DO NOT regenerate previous modules
+ ⚠ DO NOT install packages
+ ⚠ DO NOT add frontend code
+ ⚠ DO NOT store secrets
+GOAL
+Implement a profile-based subscription & entitlement system with support for:
+ SSLCommerz, Stripe, Apple Pay, Visa/Mastercard, bKash.
+INSTRUCTIONS
+Append Prisma models: Plan, Subscription, Payment
+
+
+Create payment module files only
+
+
+Implement entitlement.service.ts and enforce capability checks
+
+
+Implement gateway adapters as stubs with verification hooks
+
+
+Implement webhooks with signature verification placeholders
+
+
+Do NOT auto-run migrations
+
+
+Return only new/modified files
+

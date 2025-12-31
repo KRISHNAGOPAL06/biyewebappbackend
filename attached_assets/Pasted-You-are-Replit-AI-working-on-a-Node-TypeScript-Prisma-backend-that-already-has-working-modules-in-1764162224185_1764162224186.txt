@@ -1,0 +1,593 @@
+You are Replit AI working on a Node/TypeScript + Prisma backend that already has working modules (interests, messaging, saved searches, profile wizard, etc.). 
+
+🧠 MAIN GOAL (PATCH UPDATE ONLY)
+
+Update ONLY the **registration flows and Prisma schema** to match the final registration architecture below:
+
+- Self registration (user creates their own profile)
+- Parent registration (parent creates a candidate profile, parent is main account, candidate gets invited later to log into that same profile)
+- Candidate onboarding (invited candidate sets password, verifies OTP, and logs into the already-created profile)
+- Ability for parent to later invite additional child/guardian users to log into and manage the same profile
+
+⚠️ GLOBAL RULES — DO NOT BREAK
+
+1. 🧠 **PATCH UPDATE — DO NOT REGENERATE MODULES**
+   - Apply incremental, minimal changes only.
+   - Keep all existing folders, files, and infrastructure untouched unless strictly needed for registration.
+
+2. ❌ What you MUST NOT do:
+   - Do NOT recreate folders
+   - Do NOT reinstall packages
+   - Do NOT delete or regenerate earlier code
+   - Do NOT regenerate modules
+   - Do NOT wipe previous logic
+   - Do NOT reinitialize dependencies
+   - Do NOT modify unrelated features (interests, savedSearches, messaging, etc.)
+   - Do NOT run Prisma migrations automatically (just update schema; the user will run migrations manually later)
+
+3. ✅ What you SHOULD do:
+   - Only touch Prisma schema where explicitly instructed.
+   - Only touch registration-related services/controllers/routes.
+   - Add new functions/endpoints where needed rather than rewriting everything.
+   - Keep OTP logic, rate limiting, logger, and emailService patterns consistent with existing code.
+
+────────────────────────────────────
+1️⃣ PRISMA SCHEMA UPDATES (PATCH ONLY)
+────────────────────────────────────
+
+The current schema has `User`, `Profile`, and `CandidateLink` (PostgreSQL, Prisma).
+
+➤ Step 1: Update `CandidateLink` model
+
+Find the existing `CandidateLink` model in `schema.prisma`:
+
+```prisma
+model CandidateLink {
+  id            String   @id @default(uuid())
+  parentUserId  String   @unique
+  candidateEmail String
+  status        String   @default("pending") // pending | claimed
+  otpCode       String?
+  otpExpiry     DateTime?
+  createdAt     DateTime @default(now())
+
+  parentUser  User @relation(fields: [parentUserId], references: [id], onDelete: Cascade)
+
+  @@map("candidate_links")
+}
+Replace it with the new design that supports:
+
+One parent → many profiles
+
+Multiple child/guardian logins per profile
+
+Linking directly to a Profile and child User
+
+prisma
+Copy code
+model CandidateLink {
+  id             String   @id @default(uuid())
+  profileId      String              // which profile this access refers to
+  parentUserId   String              // main parent account managing it
+  childUserId    String?             // candidate or other guardian userId (if registered)
+  relationship   String?             // e.g. "father", "mother", "candidate", "sister"
+  role           String   @default("parent")   // parent | candidate | guardian
+  status         String   @default("pending")  // pending | active | revoked
+  createdAt      DateTime @default(now())
+
+  profile      Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  parentUser   User    @relation("ParentLinks", fields: [parentUserId], references: [id])
+  childUser    User?   @relation("ChildLinks", fields: [childUserId], references: [id])
+
+  @@index([profileId])
+  @@index([parentUserId])
+  @@index([childUserId])
+  @@index([status])
+  @@map("candidate_links")
+}
+➤ Step 2: Update User relations
+
+In the User model, add parent/child link relations. Do NOT remove existing fields like gender, dob, city etc., but new registration logic must stop relying on those (biodata will live in Profile).
+
+Current User snippet (simplified):
+
+prisma
+Copy code
+model User {
+  id              String        @id @default(uuid())
+  role            String        @default("self") // self | parent | guardian | candidate
+  lookingFor      String?
+  creatingFor     String?
+  firstName       String?
+  lastName        String?
+  gender          String?
+  dob             DateTime?
+  city            String?
+  state           String?
+  country         String?
+  email           String        @unique
+  phoneNumber     String?
+  passwordHash    String?
+  isVerified      Boolean       @default(false)
+  otpHash         String?
+  otpExpiry       DateTime?
+  candidateEmail  String?
+  sessions        Session[]
+  profile         Profile?
+  savedSearches   SavedSearch[]
+  interestsSent   Interest[]    @relation("InterestFrom")
+  interestsReceived Interest[]  @relation("InterestTo")
+  candidateLink   CandidateLink?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@map("users")
+}
+Patch it by adding array relations and leaving everything else intact:
+
+prisma
+Copy code
+model User {
+  id              String        @id @default(uuid())
+  role            String        @default("self") // self | parent | guardian | candidate
+  lookingFor      String?
+  creatingFor     String?
+  firstName       String?
+  lastName        String?
+  gender          String?
+  dob             DateTime?
+  city            String?
+  state           String?
+  country         String?
+  email           String        @unique
+  phoneNumber     String?
+  passwordHash    String?
+  isVerified      Boolean       @default(false)
+  otpHash         String?
+  otpExpiry       DateTime?
+  candidateEmail  String?
+  sessions        Session[]
+  profile         Profile?
+  savedSearches   SavedSearch[]
+  interestsSent   Interest[]    @relation("InterestFrom")
+  interestsReceived Interest[]  @relation("InterestTo")
+  candidateLink   CandidateLink?
+
+  // NEW: link user to many CandidateLinks
+  parentLinks     CandidateLink[] @relation("ParentLinks") // profiles where this user is parent
+  childLinks      CandidateLink[] @relation("ChildLinks")  // profiles where this user is child/guardian
+
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@map("users")
+}
+➤ Step 3: Do NOT modify Profile structure
+
+Profile should remain 1:1 with a single primary User:
+
+prisma
+Copy code
+model Profile {
+  id      String   @id @default(uuid())
+  userId  String   @unique
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // ... rest of existing fields untouched ...
+}
+Do NOT add migrations or run prisma migrate. Just keep schema updated.
+
+────────────────────────────────────
+2️⃣ SELF REGISTRATION FLOW (PATCH)
+────────────────────────────────────
+
+Locate the existing self registration service/controller (e.g., registerSelf, SelfRegistrationDTO). The current logic already sends OTP and creates/updates a User.
+
+Update it to:
+
+Treat User as login only
+
+Avoid writing biodata into User unless absolutely necessary
+
+Leave profile creation to the existing profile wizard module (do NOT regenerate it)
+
+➤ Flow: POST /auth/register-self
+
+Request body (example):
+
+Uses your existing SelfRegistrationDTO but conceptually:
+
+ts
+Copy code
+{
+  lookingFor: "bride" | "groom",
+  creatingFor: "self",
+  firstName: string,
+  lastName: string,
+  gender: string,
+  dob: string,
+  city: string,
+  state: string,
+  country: string,
+  email: string,
+  phoneNumber?: string,
+  password: string
+}
+Backend logic (patch registerSelf only):
+
+Check OTP rate limit for email.
+
+findUnique user by email.
+
+If user exists & isVerified == true → throw “User already exists, please login instead.”
+
+passwordHash = bcrypt.hash(password, 10).
+
+Generate otp, otpHash, otpExpiry.
+
+For new or unverified user:
+
+Upsert User:
+
+Set role = 'self'
+
+Set firstName, lastName, email, phoneNumber, passwordHash, isVerified = false, otpHash, otpExpiry.
+
+❗ Do NOT rely on User.gender, User.dob, User.city, etc. going forward. Those will be handled at the Profile level.
+
+Send OTP to email.
+
+Increment OTP rate limit.
+
+Return the same success message.
+
+Do NOT touch other endpoints that the profile wizard uses, except where they must now treat Profile as the source of biodata.
+
+The existing profile wizard should continue creating/updating Profile records for the logged-in userId.
+
+────────────────────────────────────
+3️⃣ PARENT + CANDIDATE REGISTRATION FLOW
+────────────────────────────────────
+
+You already have registerParent(dto: ParentRegistrationDTO). Patch it to implement this behavior:
+
+Parent registration form (single submission):
+
+Parent does NOT create own profile; only candidate profile is created.
+
+Request includes:
+
+lookingFor, creatingFor
+
+candidate details (firstName, lastName, gender, dob, city, state, country, email, phone)
+
+parent details (firstName, lastName, email to OTP verify, phone, password)
+
+➤ Endpoint: POST /auth/register-parent-with-candidate (or update existing registerParent to this behavior)
+
+Request Body (conceptual DTO):
+
+ts
+Copy code
+{
+  lookingFor: "bride" | "groom",
+  creatingFor: string, // son | daughter | brother | sister etc.
+
+  candidateFirstName: string,
+  candidateLastName: string,
+  candidateGender: string,
+  candidateDob: string,
+  candidateCity: string,
+  candidateState: string,
+  candidateCountry: string,
+  candidateEmail: string,
+  candidatePhoneNumber?: string,
+
+  parentFirstName: string,
+  parentLastName: string,
+  parentEmail: string,
+  parentPhoneNumber?: string,
+  password: string
+}
+Backend logic (incremental changes around existing registerParent):
+
+checkOTPRateLimit(parentEmail).
+
+Ensure no existing verified user with parentEmail. If yes → return “Email already exists, log in instead.”
+
+Hash password → passwordHash.
+
+Generate OTP for parent → otp, otpHash, otpExpiry.
+
+A. Create Parent User (login-only)
+
+ts
+Copy code
+const parentUser = await prisma.user.create({
+  data: {
+    role: 'parent',
+    firstName: parentFirstName,
+    lastName: parentLastName,
+    email: parentEmail,
+    phoneNumber: parentPhoneNumber,
+    passwordHash,
+    otpHash,
+    otpExpiry,
+    isVerified: false,
+  },
+});
+Do NOT set dob/city/state/country/gender on parent.
+
+B. Create Candidate User (primary profile owner)
+
+ts
+Copy code
+const candidateUser = await prisma.user.create({
+  data: {
+    role: 'candidate',
+    firstName: candidateFirstName,
+    lastName: candidateLastName,
+    email: candidateEmail,
+    phoneNumber: candidatePhoneNumber,
+    isVerified: false,   // will verify when candidate accepts invite
+    // no passwordHash yet
+  },
+});
+C. Create Profile for Candidate
+
+Use existing Profile model and create a new record with candidate biodata:
+
+ts
+Copy code
+const profile = await prisma.profile.create({
+  data: {
+    userId: candidateUser.id,
+    gender: candidateGender,
+    dob: new Date(candidateDob),
+    location: {
+      city: candidateCity,
+      state: candidateState,
+      country: candidateCountry,
+    },
+    // any default fields for Profile can be filled or left null
+  },
+});
+D. Link Parent to Profile via CandidateLink
+
+ts
+Copy code
+await prisma.candidateLink.create({
+  data: {
+    profileId: profile.id,
+    parentUserId: parentUser.id,
+    childUserId: null,
+    relationship: creatingFor, // "father of", "mother of" not needed; just "son", "daughter" etc.
+    role: "parent",
+    status: "active",
+  },
+});
+E. Send Emails
+
+Send OTP to parent:
+
+ts
+Copy code
+await emailService.sendOTP(parentEmail, otp, 'register-parent');
+await this.incrementOTPRateLimit(parentEmail);
+Send invite email to candidate:
+
+ts
+Copy code
+await emailService.sendCandidateInvite(candidateEmail, {
+  parentName: `${parentFirstName} ${parentLastName}`,
+  profileId: profile.id,
+  // include whatever token or link format existing email service expects
+});
+F. Response
+
+Return a clear success result; do not break existing client expectations:
+
+ts
+Copy code
+return {
+  success: true,
+  message: 'OTP sent to parent email. Candidate has been invited.',
+};
+────────────────────────────────────
+4️⃣ CANDIDATE ONBOARDING (NEW ENDPOINT)
+────────────────────────────────────
+
+Add a new endpoint/service function to let the invited candidate finish registration:
+
+➤ POST /auth/candidate-start
+
+Request body:
+
+ts
+Copy code
+{
+  email: string,       // candidate email
+  password: string,
+  phoneNumber?: string
+}
+Backend logic:
+
+const candidateUser = await prisma.user.findUnique({ where: { email } })
+
+Ensure candidateUser exists and role === 'candidate'.
+
+Confirm that a Profile exists:
+
+ts
+Copy code
+const profile = await prisma.profile.findUnique({ where: { userId: candidateUser.id } });
+if (!profile) throw new Error('Profile not found for this candidate');
+Generate OTP + hash password:
+
+ts
+Copy code
+const passwordHash = await bcrypt.hash(password, 10);
+const otp = this.generateOTP();
+const otpHash = await bcrypt.hash(otp, 10);
+const otpExpiry = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000);
+
+await prisma.user.update({
+  where: { id: candidateUser.id },
+  data: {
+    passwordHash,
+    phoneNumber,
+    otpHash,
+    otpExpiry,
+  },
+});
+Optionally create a CandidateLink row for the candidate as a child user (if not existing):
+
+ts
+Copy code
+await prisma.candidateLink.create({
+  data: {
+    profileId: profile.id,
+    parentUserId: /* optional: if you want to connect back to same parent, find from existing CandidateLink */,
+    childUserId: candidateUser.id,
+    relationship: "candidate",
+    role: "candidate",
+    status: "pending",
+  },
+});
+Send OTP to candidate email:
+
+ts
+Copy code
+await emailService.sendOTP(candidateUser.email, otp, 'register-candidate');
+Return a success message.
+
+➤ Candidate then uses the existing /auth/verify-otp endpoint:
+
+On success:
+
+Set isVerified = true for candidate user.
+
+Update any CandidateLink where childUserId = candidateUser.id and role = "candidate" from status = "pending" to status = "active".
+
+This gives candidate full login access to the same profile.
+
+────────────────────────────────────
+5️⃣ INVITING ADDITIONAL CHILD/GUARDIAN USERS
+────────────────────────────────────
+
+Add a small feature on top of this:
+
+➤ Endpoint: POST /auth/invite-child
+
+Used by parent (or candidate) after login to add another user (e.g., mother/sibling) who can log into the same profile.
+
+Request body:
+
+ts
+Copy code
+{
+  profileId: string,
+  email: string,
+  firstName: string,
+  lastName: string,
+  phoneNumber?: string,
+  relationship: string // "mother", "sister", etc.
+}
+Backend logic:
+
+Confirm logged-in user has an active CandidateLink to profileId with role in ["parent", "candidate"].
+
+Lookup or create User for the invited email:
+
+If user exists, use it.
+
+Else, create User with role = 'guardian', firstName, lastName, email, phoneNumber, isVerified = false.
+
+Create CandidateLink row:
+
+ts
+Copy code
+await prisma.candidateLink.create({
+  data: {
+    profileId,
+    parentUserId: <logged-in parent or primary parent>,
+    childUserId: childUser.id,
+    relationship,
+    role: "guardian",
+    status: "pending",
+  },
+});
+Send invite email (similar to candidate invite).
+
+New guardian then follows a similar flow to candidate-start:
+
+Set password.
+
+Receive OTP.
+
+Use /auth/verify-otp.
+
+On verification, mark their CandidateLink as status = "active".
+
+────────────────────────────────────
+6️⃣ PROFILE WIZARD & INTERESTS/SAVEDSEARCH
+────────────────────────────────────
+
+✅ IMPORTANT: DO NOT REWRITE THESE MODULES.
+
+They already work and must remain intact, except:
+
+Where the code decides which userId to use when acting on a profile, ensure:
+
+When a parent/guardian is logged in and editing/sending interests “on behalf of a profile”, you use the profile’s primary owner userId (i.e., profile.userId, the candidate user) as the actor.
+
+Self user just uses their own userId.
+
+If there is already an actingOwnerId or similar concept in the profile wizard or interest logic, update it to:
+
+Resolve profile by profileId.
+
+Use profile.userId as the “acting owner user id” for interests, matches, etc., even if the logged-in account is the parent.
+
+Do NOT modify the core matching logic, interest table structure, or saved search structure.
+
+────────────────────────────────────
+7️⃣ EXPECTED RESULT
+────────────────────────────────────
+
+When patching is complete, ensure:
+
+✔ Prisma schema is updated only for:
+
+User (added relations for ParentLinks/ChildLinks)
+
+CandidateLink (new structure)
+✔ Existing modules (interests, messaging, savedSearch, profile fields) are untouched logically.
+✔ Self registration flow:
+
+Uses User for login & OTP.
+
+Relies on profile wizard for biodata in Profile.
+✔ Parent registration flow:
+
+Creates User for parent (login only).
+
+Creates User for candidate (primary owner).
+
+Creates Profile for candidate.
+
+Creates CandidateLink linking parent and profile.
+
+Sends OTP to parent and invite email to candidate.
+✔ New candidate onboarding endpoint:
+
+Lets candidate set password & OTP.
+
+Activates their login for the already-created profile.
+✔ New child/guardian invite logic:
+
+Adds more logins to same profile via CandidateLink.
+✔ No Prisma migrations are run automatically.
+✔ No dependencies are added or removed.
+✔ No folders or modules are regenerated.
+
+Apply all changes incrementally and keep the rest of the project behavior unchanged.

@@ -1,0 +1,421 @@
+openapi: 3.0.3
+info:
+  title: Notification System API
+  description: API for managing in-app notifications and notification preferences
+  version: 1.0.0
+
+paths:
+  /api/v1/notifications:
+    get:
+      summary: List notifications
+      description: Retrieve a paginated list of notifications for the authenticated user
+      operationId: listNotifications
+      tags:
+        - Notifications
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          description: Page number (default 1)
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          description: Number of items per page (default 20, max 100)
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: unreadOnly
+          in: query
+          description: Filter to show only unread notifications
+          schema:
+            type: boolean
+            default: false
+        - name: type
+          in: query
+          description: Filter by notification type
+          schema:
+            type: string
+            enum:
+              - otp
+              - interest_received
+              - interest_accepted
+              - new_message
+              - profile_view
+              - guardian_added
+              - subscription
+              - moderation
+      responses:
+        '200':
+          description: Notifications retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/v1/notifications/unread-count:
+    get:
+      summary: Get unread notification count
+      description: Retrieve the count of unread notifications for the authenticated user
+      operationId: getUnreadCount
+      tags:
+        - Notifications
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Unread count retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      unreadCount:
+                        type: integer
+                        example: 5
+                  message:
+                    type: string
+                    example: Unread count retrieved
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/notifications/{id}/read:
+    patch:
+      summary: Mark notification as read
+      description: Mark a specific notification as read
+      operationId: markAsRead
+      tags:
+        - Notifications
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Notification ID (UUID)
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Notification marked as read
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/v1/notifications/read-all:
+    patch:
+      summary: Mark all notifications as read
+      description: Mark all unread notifications as read for the authenticated user
+      operationId: markAllAsRead
+      tags:
+        - Notifications
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: All notifications marked as read
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      markedCount:
+                        type: integer
+                        example: 10
+                  message:
+                    type: string
+                    example: 10 notifications marked as read
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/v1/notifications/preferences:
+    get:
+      summary: Get notification preferences
+      description: Retrieve notification preferences for the authenticated user
+      operationId: getPreferences
+      tags:
+        - Notification Preferences
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Preferences retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PreferencesResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    patch:
+      summary: Update notification preferences
+      description: Update notification preferences for the authenticated user
+      operationId: updatePreferences
+      tags:
+        - Notification Preferences
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePreferencesRequest'
+      responses:
+        '200':
+          description: Preferences updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PreferencesResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT access token
+
+  schemas:
+    Notification:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440000
+        userId:
+          type: string
+          format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440001
+        type:
+          type: string
+          enum:
+            - otp
+            - interest_received
+            - interest_accepted
+            - new_message
+            - profile_view
+            - guardian_added
+            - subscription
+            - moderation
+          example: interest_received
+        title:
+          type: string
+          example: You have a new interest!
+        body:
+          type: string
+          example: John has shown interest in your profile
+        isRead:
+          type: boolean
+          example: false
+        deliveredAt:
+          type: string
+          format: date-time
+          nullable: true
+          example: 2024-01-15T10:30:00Z
+        createdAt:
+          type: string
+          format: date-time
+          example: 2024-01-15T10:30:00Z
+
+    NotificationListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            notifications:
+              type: array
+              items:
+                $ref: '#/components/schemas/Notification'
+            pagination:
+              type: object
+              properties:
+                page:
+                  type: integer
+                  example: 1
+                limit:
+                  type: integer
+                  example: 20
+                total:
+                  type: integer
+                  example: 45
+                totalPages:
+                  type: integer
+                  example: 3
+        message:
+          type: string
+          example: Notifications retrieved successfully
+
+    NotificationResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/Notification'
+        message:
+          type: string
+          example: Notification marked as read
+
+    NotificationPreference:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440002
+        userId:
+          type: string
+          format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440001
+        emailEnabled:
+          type: boolean
+          example: true
+        pushEnabled:
+          type: boolean
+          example: true
+        inAppEnabled:
+          type: boolean
+          example: true
+
+    PreferencesResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/NotificationPreference'
+        message:
+          type: string
+          example: Notification preferences retrieved
+
+    UpdatePreferencesRequest:
+      type: object
+      properties:
+        emailEnabled:
+          type: boolean
+          description: Enable or disable email notifications
+        pushEnabled:
+          type: boolean
+          description: Enable or disable push notifications
+        inAppEnabled:
+          type: boolean
+          description: Enable or disable in-app notifications
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          properties:
+            message:
+              type: string
+              example: An error occurred
+            code:
+              type: string
+              example: ERROR_CODE
+
+  responses:
+    Unauthorized:
+      description: Authentication required or token invalid
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              message: No token provided
+              code: UNAUTHORIZED
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              message: Notification not found
+              code: NOTIFICATION_NOT_FOUND
+
+    BadRequest:
+      description: Invalid request data
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              message: Validation failed
+              code: VALIDATION_ERROR
+
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              message: An unexpected error occurred
+              code: INTERNAL_ERROR
+
+tags:
+  - name: Notifications
+    description: Notification management endpoints
+  - name: Notification Preferences
+    description: Notification preferences management

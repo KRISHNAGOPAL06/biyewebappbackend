@@ -1,0 +1,848 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AuthProvider {
+  EMAIL
+  GOOGLE
+}
+
+model User {
+  id              String        @id @default(uuid())
+  role            String        @default("self") // self | parent | guardian | candidate
+  lookingFor      String?       // bride | groom
+  creatingFor     String?       // self | brother | sister | son | daughter | nephew | niece
+  firstName       String?
+  lastName        String?
+  gender          String?
+  dob             DateTime?
+  city            String?
+  state           String?
+  country         String?
+  email           String        @unique
+  phoneNumber     String?
+  passwordHash    String?
+  isVerified      Boolean       @default(false)
+  otpHash         String?
+  otpExpiry       DateTime?
+  candidateEmail  String?       // parent creates this
+  sessions        Session[]
+  profile         Profile?
+  savedSearches   SavedSearch[]
+  interestsSent   Interest[]    @relation("InterestFrom")
+  interestsReceived Interest[]  @relation("InterestTo")
+
+   // 🔹 Google
+  googleId      String?  @unique
+  authProvider  AuthProvider @default(EMAIL)
+
+  parentLinks     CandidateLink[] @relation("ParentLinks")
+  childLinks      CandidateLink[] @relation("ChildLinks")
+
+  notifications            Notification[]
+  notificationPreference   NotificationPreference?
+  deviceTokens             DeviceToken[]
+
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@map("users")
+}
+
+model CandidateLink {
+  id             String   @id @default(uuid())
+  profileId      String
+  parentUserId   String
+  childUserId    String?
+  relationship   String?
+  role           String   @default("parent")
+  status         String   @default("pending")
+  createdAt      DateTime @default(now())
+
+  profile      Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  parentUser   User    @relation("ParentLinks", fields: [parentUserId], references: [id])
+  childUser    User?   @relation("ChildLinks", fields: [childUserId], references: [id])
+
+  @@index([profileId])
+  @@index([parentUserId])
+  @@index([childUserId])
+  @@index([status])
+  @@map("candidate_links")
+}
+
+model Session {
+  id         String   @id @default(uuid())
+  userId     String
+  deviceId   String?
+  ip         String?
+  userAgent  String?
+  revoked    Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  lastSeenAt DateTime @updatedAt
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model Profile {
+  id               String      @id @default(uuid())
+  userId           String      @unique
+  registeredUserId String      @unique
+  displayName      String?
+  headline         String?
+  about            String?
+  gender           String?
+  dob              DateTime?
+  location         Json?
+  published        Boolean     @default(false)
+  completeness     Int         @default(0)
+
+  // About Me
+  description      String?
+  languagesKnown   String[]
+
+  // Demographics
+  height           Decimal?    @db.Decimal(5,2)
+  weight           Decimal?    @db.Decimal(5,2)
+  highestEducation String?
+  fieldOfStudy     String?
+  profession       String?
+  religion         String?
+  ancestralHome    String?
+  division         String?
+
+  // Family
+  maritalStatus    String?
+  fatherOccupation String?
+  motherOccupation String?
+  siblingsCount    Int?
+  childrenCount    Int?
+  childrenStatus   String?
+
+  // Lifestyle & Interests
+  hobbies          String[]
+  dietPreference   String?
+  smokingHabit     String?
+  drinkingHabit    String?
+  exerciseRoutine  String?
+  petPreference    String?
+  livingSituation  String?
+
+  // Partner Preferences
+  prefAgeRangeFrom       Int?
+  prefAgeRangeTo         Int?
+  prefHeightFrom         Decimal?  @db.Decimal(5,2)
+  prefHeightTo           Decimal?  @db.Decimal(5,2)
+  prefLocation           Json?
+  prefEducation          String?
+  prefProfession         String?
+  prefReligion           String?
+  prefMaritalStatus      String?
+  prefChildrenCount      Int?
+  prefChildrenStatus     String?
+  prefDietPreference     String?
+  prefSmokingHabit       String?
+  prefDrinkingHabit      String?
+
+   preferredCurrency    String?         @default("BDT")  // User's preferred currency
+  lastDetectedCountry  String?         // Last detected country from payment
+  currencyDetectedAt   DateTime?       // When currency was last detected
+
+  // Obhijaat Elite Features
+  isInvisible        Boolean   @default(false) @map("is_invisible")  // Invisible by default for Obhijaat
+  approvedViewers    String[]  @map("approved_viewers")              // User IDs who can see this profile
+  introVideoUrl      String?   @map("intro_video_url")               // Personal intro video (45 sec max)
+
+  photos         Photo[]
+  preferences    Preference?
+  candidateLinks CandidateLink[]
+  subscriptions  Subscription[]
+  // obhijaatInvitations ObhijaatInvitation[]
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  deletedAt      DateTime?
+  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([published])
+  @@index([gender])
+  @@index([createdAt])
+  @@index([location])
+  @@index([isInvisible])
+  @@map("profiles")
+}
+
+model Photo {
+  id               String    @id @default(uuid())
+  profileId        String
+  objectKey        String?
+  url              String?
+  fileSize         Int?
+  mimeType         String?
+  privacyLevel     String    @default("public")
+  moderationStatus String    @default("pending")
+  moderationNote   String?
+  createdAt        DateTime  @default(now())
+  uploadedAt       DateTime?
+  deletedAt        DateTime?
+  profile          Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@map("photos")
+}
+
+model Preference {
+  id        String   @id @default(uuid())
+  profileId String   @unique
+  basic     Json?
+  lifestyle Json?
+  education Json?
+  community Json?
+  location  Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@map("preferences")
+}
+
+model SavedSearch {
+  id        String   @id @default(uuid())
+  userId    String
+  name      String
+  filters   Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("saved_searches")
+}
+
+model Interest {
+  id         String   @id @default(uuid())
+  fromUserId String
+  toUserId   String
+  status     String   @default("pending")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  fromUser User @relation("InterestFrom", fields: [fromUserId], references: [id], onDelete: Cascade)
+  toUser   User @relation("InterestTo", fields: [toUserId], references: [id], onDelete: Cascade)
+
+  @@unique([fromUserId, toUserId])
+  @@index([fromUserId])
+  @@index([toUserId])
+  @@index([status])
+  @@map("interests")
+}
+
+// Chat & Messaging Models
+// Note: participants as String[] is PostgreSQL-specific array type
+// For databases without array support, consider using JSON type instead
+model Thread {
+  id           String    @id @default(uuid())
+  participants String[]  // Array of userIds - PostgreSQL text[] type
+  lastMsgAt    DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  messages     Message[]
+
+  @@index([lastMsgAt])
+  @@map("threads")
+}
+
+// Consider partitioning messages by date for scale in production
+// Archive older messages to separate table/storage for better performance
+model Message {
+  id         String   @id @default(uuid())
+  threadId   String
+  fromUserId String
+  toUserId   String?  // nullable for group threads
+  content    String
+  metadata   Json?    // For flags like moderation status, attachments, etc.
+  delivered  Boolean  @default(false)
+  read       Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  thread Thread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  @@index([threadId, createdAt])
+  @@index([fromUserId])
+  @@index([toUserId])
+  @@map("messages")
+}
+
+// Notification System Models
+// Run migration after adding: npx prisma migrate dev --name add_notification_system
+model Notification {
+  id          String    @id @default(uuid())
+  userId      String
+  type        String    // otp, interest_received, interest_accepted, new_message, profile_view, subscription, moderation, guardian_added
+  title       String
+  body        String
+  metadata    Json?
+  isRead      Boolean   @default(false)
+  deliveredAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+model NotificationPreference {
+  id           String   @id @default(uuid())
+  userId       String   @unique
+  emailEnabled Boolean  @default(true)
+  pushEnabled  Boolean  @default(true)
+  inAppEnabled Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notification_preferences")
+}
+
+model DeviceToken {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("device_tokens")
+}
+
+// Payment & Subscription System Models
+// Update Plan model in schema.prisma
+model Plan {
+  id           String   @id @default(uuid())
+  code         String   @unique
+  name         String
+  price        Int
+  durationDays Int      @map("duration_days")
+  isInviteOnly Boolean  @default(false) @map("is_invite_only")
+  category     String   @default("subscription") // subscription, vendor, feature, etc.
+  features     Json
+  
+  // Discount & Coupon fields
+  discountPercent   Int?      @map("discount_percent")
+  discountAmount    Int?      @map("discount_amount")
+  couponCode        String?   @map("coupon_code")
+  couponValidUntil  DateTime? @map("coupon_valid_until")
+  
+  createdAt    DateTime @default(now())
+
+  subscriptions Subscription[]
+
+  @@map("plans")
+}
+
+model Subscription {
+  id            String    @id @default(uuid())
+  profileId     String
+  planId        String
+  status        String    // active | expired | paused | cancelled
+  startAt       DateTime
+  endAt         DateTime
+  pausedUntil   DateTime?
+  createdByUser String    // who paid (parent/candidate)
+  createdAt     DateTime  @default(now())
+
+  profile  Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  plan     Plan      @relation(fields: [planId], references: [id], onDelete: Restrict)
+  payments Payment[]
+
+  @@index([profileId])
+  @@index([status])
+  @@map("subscriptions")
+}
+
+model Payment {
+  id             String        @id @default(uuid())
+  subscriptionId String?
+  profileId      String
+  gateway        String        // sslcommerz | stripe | bkash | applepay
+  amount         Int
+  currency       String        // BDT
+  status         String        // initiated | success | failed | refunded
+  gatewayTxnId   String?
+  rawResponse    Json?
+  createdAt      DateTime      @default(now())
+
+  subscription Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+
+  @@index([profileId])
+  @@index([subscriptionId])
+  @@map("payments")
+}
+
+// Invitation System for Obhijaat (Elite Tier)
+enum InvitationStatus {
+  PENDING     // Request submitted, awaiting admin review
+  APPROVED    // Admin approved, code generated
+  REJECTED    // Admin rejected request
+  USED        // Code has been used
+  EXPIRED     // Code expired without use
+}
+
+model ObhijaatInvitation {
+  id          String           @id @default(uuid())
+  
+  // Requester info
+  fromProfileId   String
+  inviteeName     String
+  inviteeEmail    String
+  inviteePhone    String?
+  message         String?
+  
+  // Status tracking
+  status      String   @default("pending") // pending | approved | rejected | used | expired
+  
+  // Admin handling
+  processedAt DateTime?
+  
+  // Timestamps
+  sentAt      DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  
+  @@map("obhijaat_invitations")
+}
+
+model InvitationCode {
+  id          String           @id @default(uuid())
+  code        String?          @unique // Generated only after approval
+  
+  // Requester info
+  profileId   String
+  email       String
+  fullName    String
+  reason      String?          // Why they want Obhijaat access
+  
+  // Status tracking
+  status      InvitationStatus @default(PENDING)
+  
+  // Referral tracking (if invited by existing Obhijaat member)
+  referredByProfileId String?  // Obhijaat member who referred this user
+  isReferral  Boolean          @default(false) // true if generated by member
+  
+  // Admin handling
+  reviewedBy  String?          // Admin user ID who reviewed
+  reviewedAt  DateTime?
+  rejectReason String?
+  
+  // Usage tracking
+  usedAt      DateTime?
+  usedByProfileId String?      // Profile that used the code
+  
+  // Expiry
+  expiresAt   DateTime?        // Code expires if not used
+  
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  
+  @@index([profileId])
+  @@index([code])
+  @@index([status])
+  @@index([email])
+  @@index([referredByProfileId])
+  @@map("invitation_codes")
+}
+
+// ============== VENDOR MODULE MODELS ==============
+
+enum VendorStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
+
+enum OnboardingStatus {
+  REGISTERED // Account created, email verified
+  PLAN_SELECTED // Subscription plan chosen
+  PROFILE_COMPLETED // All required profile fields filled
+  PENDING_APPROVAL // Submitted for admin review
+  APPROVED // Live on platform
+  REJECTED // Needs changes
+  SUSPENDED // Account suspended
+}
+
+enum VendorPlanTier {
+  BASIC
+  FEATURED
+  PREMIUM
+  ELITE
+}
+
+enum BookingStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  COMPLETED
+  CANCELLED
+}
+
+// Vendor Account (separate from User for clean separation)
+model Vendor {
+  id               String           @id @default(uuid())
+  email            String           @unique
+  phoneNumber      String?
+  passwordHash     String
+  businessName     String
+  ownerName        String
+  status           VendorStatus     @default(PENDING)
+  onboardingStatus OnboardingStatus @default(REGISTERED)
+  isVerified       Boolean          @default(false)
+  otpHash          String?
+  otpExpiry        DateTime?
+  rejectionReason  String?
+  approvedAt       DateTime?
+  approvedBy       String? // Admin user ID
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  planId             String?
+  plan               VendorPlan? @relation(fields: [planId], references: [id])
+  subscriptionExpiry DateTime?
+  mediaStorageUsed   BigInt      @default(0)
+
+  profile       VendorProfile?
+  services      VendorService[]
+  sessions      VendorSession[]
+  payments      VendorPayment[]
+  subscriptions VendorSubscription[]
+
+  @@map("vendors")
+}
+
+model VendorPlan {
+  id          String         @id @default(uuid())
+  name        String // e.g., "Basic Presence"
+  tier        VendorPlanTier @unique
+  priceYearly Decimal        @db.Decimal(10, 2)
+
+  // Limits
+  maxPhotos        Int
+  maxVideos        Int
+  hasAnalytics     Boolean @default(false)
+  hasPriority      Boolean @default(false)
+  hasVerifiedBadge Boolean @default(false)
+
+  vendors       Vendor[]
+  subscriptions VendorSubscription[]
+
+  @@map("vendor_plans")
+}
+
+model VendorSubscription {
+  id        String   @id @default(uuid())
+  vendorId  String
+  planId    String
+  pricePaid Decimal  @db.Decimal(10, 2)
+  currency  String   @default("INR")
+  startAt   DateTime
+  endAt     DateTime
+  isActive  Boolean  @default(true)
+  paymentId String? // Link to payment record
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  vendor  Vendor         @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  plan    VendorPlan     @relation(fields: [planId], references: [id])
+  payment VendorPayment? @relation(fields: [paymentId], references: [id])
+
+  @@index([vendorId])
+  @@index([isActive])
+  @@map("vendor_subscriptions")
+}
+
+model VendorSession {
+  id         String   @id @default(uuid())
+  vendorId   String
+  deviceId   String?
+  ip         String?
+  userAgent  String?
+  revoked    Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  lastSeenAt DateTime @updatedAt
+
+  vendor Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  @@map("vendor_sessions")
+}
+
+// Vendor Profile (business details)
+model VendorProfile {
+  id       String @id @default(uuid())
+  vendorId String @unique
+
+  // Basic Info
+  tagline     String? // Short tagline
+  description String?
+  logo        String? // URL to logo image
+  coverImage  String? // URL to cover image
+  images      String[] // Gallery images URLs
+
+  // Details
+  address   String?
+  city      String?
+  state     String?
+  country   String?
+  pincode   String?
+  latitude  Decimal? @db.Decimal(10, 8)
+  longitude Decimal? @db.Decimal(11, 8)
+
+  yearsExperience Int?
+  yearsInBusiness Int? // New field
+  teamSize        Int? // New field
+
+  // Category
+  categoryId String? // Service category
+  category   ServiceCategory? @relation(fields: [categoryId], references: [id])
+
+  website String?
+
+  // Service Areas
+  serviceRegion        String? // Service area (e.g., "Bangladesh", "International")
+  serviceCities        String[] // Specific cities served
+  citiesServed         Boolean? @default(false) // Deprecated, use serviceCities
+  shipsInternationally Boolean? @default(false) // For product-based vendors
+  travelPolicy         String? // e.g., "Travel charges extra"
+
+  // Social & Ops
+  socialLinks  Json? // { facebook, instagram, etc. }
+  workingHours Json? // { monday: { open, close }, etc. }
+
+  // Lead Preferences
+  leadPreferences Json? // { minBudget, maxBudget, minGuests, maxGuests }
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  vendor Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  @@map("vendor_profiles")
+}
+
+// Admin-controlled service categories
+model ServiceCategory {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  slug        String   @unique
+  description String?
+  icon        String? // Icon URL or icon name
+  image       String? // Category image URL
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  services       VendorService[]
+  vendorProfiles VendorProfile[]
+
+  @@map("service_categories")
+}
+
+// Vendor's individual services
+model VendorService {
+  id          String   @id @default(uuid())
+  vendorId    String
+  categoryId  String
+  title       String
+  description String?
+  images      String[] // Service images
+  basePrice   Decimal  @db.Decimal(10, 2)
+  currency    String   @default("INR")
+  priceUnit   String   @default("per_event") // per_event, per_hour, per_day, per_person
+  minCapacity Int? // Minimum guests/capacity
+  maxCapacity Int? // Maximum guests/capacity
+  duration    Int? // Duration in hours
+  inclusions  String[] // What's included
+  exclusions  String[] // What's not included
+  isAvailable Boolean  @default(true)
+  avgRating   Decimal? @db.Decimal(2, 1)
+  reviewCount Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  vendor   Vendor           @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  category ServiceCategory  @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  bookings ServiceBooking[]
+  reviews  ServiceReview[]
+
+  @@index([vendorId])
+  @@index([categoryId])
+  @@index([isAvailable])
+  @@map("vendor_services")
+}
+
+// Service booking requests
+model ServiceBooking {
+  id            String        @id @default(uuid())
+  serviceId     String
+  userId        String // User making the booking
+  vendorId      String // Denormalized for easy queries
+  eventDate     DateTime
+  eventTime     String? // e.g., "10:00 AM"
+  eventLocation String?
+  guestCount    Int?
+  requirements  String? // Special requirements
+  status        BookingStatus @default(PENDING)
+  totalAmount   Decimal?      @db.Decimal(10, 2)
+  vendorNotes   String? // Notes from vendor
+  userNotes     String? // Notes from user
+  respondedAt   DateTime? // When vendor responded
+  completedAt   DateTime? // When marked as completed
+  cancelledAt   DateTime?
+  cancelReason  String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  service  VendorService   @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  review   ServiceReview?
+  payments VendorPayment[]
+
+  @@index([userId])
+  @@index([vendorId])
+  @@index([status])
+  @@index([eventDate])
+  @@map("service_bookings")
+}
+
+// Reviews linked to completed bookings only
+model ServiceReview {
+  id          String    @id @default(uuid())
+  bookingId   String    @unique
+  serviceId   String
+  userId      String
+  vendorId    String // Denormalized for vendor dashboards
+  rating      Int // 1-5
+  title       String?
+  comment     String?
+  images      String[] // Review images
+  vendorReply String?
+  repliedAt   DateTime?
+  isVisible   Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  booking ServiceBooking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  service VendorService  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@index([serviceId])
+  @@index([vendorId])
+  @@index([rating])
+  @@map("service_reviews")
+}
+
+// ============== VENDOR PAYMENT MODULE ==============
+
+enum PaymentStatus {
+  INITIATED
+  OTP_VERIFIED
+  PROCESSING
+  SUCCESS
+  FAILED
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentMethod {
+  CARD
+  UPI
+  NETBANKING
+  WALLET
+  CASH
+}
+
+// Vendor Payment Records - tracks ALL payment attempts
+model VendorPayment {
+  id        String  @id @default(uuid())
+  vendorId  String
+  bookingId String? // Optional - can be subscription payment
+
+  // Payment Details
+  amount      Decimal       @db.Decimal(10, 2)
+  currency    String        @default("INR")
+  method      PaymentMethod
+  status      PaymentStatus @default(INITIATED)
+  description String? // Payment description/purpose
+
+  // Gateway Response
+  transactionId   String? // Gateway transaction ID
+  gatewayOrderId  String? // Order ID from gateway
+  gatewayName     String? // e.g., "razorpay", "stripe"
+  gatewayResponse Json? // Raw response from gateway
+
+  // OTP Verification
+  otpHash       String?
+  otpExpiry     DateTime?
+  otpVerifiedAt DateTime?
+
+  // Status Timestamps
+  initiatedAt   DateTime  @default(now())
+  processingAt  DateTime?
+  completedAt   DateTime?
+  failedAt      DateTime?
+  cancelledAt   DateTime?
+  failureReason String?
+  failureCode   String? // Gateway error code
+
+  // Refund Info
+  refundedAt            DateTime?
+  refundAmount          Decimal?  @db.Decimal(10, 2)
+  refundReason          String?
+  refundTransactionId   String?
+  refundGatewayResponse Json?
+
+  // Metadata
+  ipAddress String?
+  userAgent String?
+  metadata  Json? // Additional custom data
+
+  // Audit
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  vendor              Vendor               @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  booking             ServiceBooking?      @relation(fields: [bookingId], references: [id])
+  vendorSubscriptions VendorSubscription[]
+
+  @@index([vendorId])
+  @@index([bookingId])
+  @@index([status])
+  @@index([transactionId])
+  @@index([createdAt])
+  @@map("vendor_payments")
+}
+
+// ============== PROFILE REPORTING ==============
+
+model Report {
+  id                String   @id @default(uuid())
+  reporterUserId    String   // User who submitted the report
+  reportedProfileId String   // Profile being reported
+  reason            String   // Fake profile, Inappropriate content, etc.
+  details           String?  // Additional details provided by user
+  screenshotUrl     String?  // Optional screenshot URL
+  status            String   @default("pending") // pending, reviewed, resolved, dismissed
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([reporterUserId])
+  @@index([reportedProfileId])
+  @@index([status])
+  @@map("reports")
+}
