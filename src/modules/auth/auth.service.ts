@@ -344,7 +344,9 @@ export class AuthService {
     });
 
     try {
-      await emailService.sendOTP(email, otp, 'login');
+      // Temporarily sending "Hello" for testing as requested
+      await emailService.sendEmail(email, 'Hello from Biye!', '<h1>Hello!</h1><p>Your email service is working perfectly.</p>');
+      // await emailService.sendOTP(email, otp, 'login');
     } catch (error) {
       logger.error('Failed to send login OTP', { email, error });
       throw new Error(`Login failed: Could not send verification code. ${error instanceof Error ? error.message : ''}`);
