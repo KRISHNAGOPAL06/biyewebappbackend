@@ -5,7 +5,7 @@ import { corsMiddleware } from './middleware/cors.js';
 import { rateLimiter } from './middleware/rateLimit.js';
 import { requestIdMiddleware } from './middleware/requestId.js';
 import { errorHandler } from './middleware/errorHandler.js';
-import { logRequest } from './utils/logger.js';
+import { logRequest, logger } from './utils/logger.js';
 import healthRoute from './routes/health.route.js';
 import authRoutes from './modules/auth/auth.routes.js';
 import profileRoutes from './modules/profile/profile.routes.js';
@@ -73,6 +73,16 @@ export function createApp() {
 
   app.use(helmetMiddleware);
   app.use(corsMiddleware);
+  app.use('/uploads', (req, _res, next) => {
+    const filePath = path.join(process.cwd(), 'uploads', req.path);
+    import('fs').then((fs) => {
+      if (!fs.existsSync(filePath)) {
+        logger.warn(`[Static] File not found: ${filePath}`);
+      }
+    });
+    next();
+  });
+
   app.use(
     '/uploads',
     express.static(path.join(process.cwd(), 'uploads'), {
