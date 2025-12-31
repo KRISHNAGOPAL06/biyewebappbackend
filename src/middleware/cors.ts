@@ -39,12 +39,23 @@ export const corsMiddleware = cors({
       return callback(null, true);
     }
 
-    const allowedOrigins = env.ALLOWED_ORIGINS ?? [];
+    const allowedOrigins = (env.ALLOWED_ORIGINS ?? []).map((o) => o.replace(/\/+$/, '').toLowerCase());
+    const normalizedOrigin = origin.replace(/\/+$/, '').toLowerCase();
 
-    if (allowedOrigins.includes(origin)) {
+    // Check for exact match or wildcard match (e.g. if ALLOWED_ORIGINS has "http://localhost:5173/*")
+    const isAllowed = allowedOrigins.some((o) => {
+      if (o.endsWith('/*')) {
+        const base = o.slice(0, -2);
+        return normalizedOrigin.startsWith(base);
+      }
+      return o === normalizedOrigin;
+    });
+
+    if (isAllowed) {
       return callback(null, true);
     }
 
+    logger.warn(`[CORS] Access denied for origin: ${origin}`);
     // ❌ DO NOT throw — just deny silently
     return callback(null, false);
   },
