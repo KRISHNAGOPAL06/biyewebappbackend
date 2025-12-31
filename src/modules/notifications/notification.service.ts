@@ -10,6 +10,7 @@ import {
 import { NotificationQueryDTO } from './notification.dto.js';
 
 import { prisma } from '../../prisma.js';
+import { emailService } from '../auth/email.service.js';
 
 class NotificationService {
   async createInAppNotification(payload: NotificationPayload): Promise<NotificationResponse> {
@@ -160,10 +161,7 @@ class NotificationService {
   }
 
   private async sendEmail(payload: EmailPayload): Promise<void> {
-    logger.info('Email notification queued (stub)', {
-      to: payload.to,
-      subject: payload.subject,
-    });
+    await emailService.sendEmail(payload.to, payload.subject, payload.body);
   }
 
   async sendPushNotification(

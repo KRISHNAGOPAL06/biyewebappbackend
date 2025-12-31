@@ -1,34 +1,63 @@
 import nodemailer from 'nodemailer';
 import { logger } from '../../utils/logger.js';
+import { env } from '../../config/env.js';
 
 const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST || 'smtp.ethereal.email',
-  port: Number(process.env.EMAIL_PORT) || 587,
-  secure: false,
+  host: env.EMAIL_HOST,
+  port: env.EMAIL_PORT,
+  secure: env.EMAIL_PORT === 465, // Use SSL for 465, STARTTLS for 587
   auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
+    user: env.EMAIL_USER,
+    pass: env.EMAIL_PASS,
   },
-  logger: true,   // Enable logging
-  debug: true,
+  logger: env.NODE_ENV === 'development',
+  debug: env.NODE_ENV === 'development',
 });
 
+// Verify connection configuration
+if (env.NODE_ENV !== 'test') {
+  transporter.verify((error) => {
+    if (error) {
+      logger.error('[EmailService] SMTP connection error:', { error: error.message });
+    } else {
+      logger.info('[EmailService] SMTP server is ready to take messages');
+    }
+  });
+}
+
 export class EmailService {
-  async sendOTP(email: string, otp: string, type: 'register' | 'login'): Promise<void> {
-    logger.info(`[EmailService] Sending OTP to ${email}`, {
-      type,
-      otpLength: otp.length,
-    });
+  /**
+   * Generic method to send an email.
+   * Can be used by other modules (e.g., Notifications).
+   */
+  async sendEmail(to: string, subject: string, html: string): Promise<void> {
+    logger.info(`[EmailService] Sending email to ${to}`, { subject });
 
-    if (process.env.NODE_ENV === 'development') {
-      logger.debug(`[EmailService] OTP for ${email}: ${otp}`);
-
-      if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-        logger.warn('[EmailService] No email credentials found. Skipping email send (DEV MODE).');
-        return;
-      }
+    if (env.NODE_ENV === 'development' && (!env.EMAIL_USER || !env.EMAIL_PASS)) {
+      logger.warn('[EmailService] No email credentials found. Skipping email send (DEV MODE).');
+      logger.debug(`[EmailService] Target: ${to}, Subject: ${subject}, Content: ${html.substring(0, 100)}...`);
+      return;
     }
 
+    try {
+      const info = await transporter.sendMail({
+        from: env.EMAIL_FROM,
+        to,
+        subject,
+        html,
+      });
+
+      logger.info(`[EmailService] Email sent successfully to ${to}`, { messageId: info.messageId });
+    } catch (error) {
+      logger.error(`[EmailService] Failed to send email to ${to}`, {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        subject,
+      });
+      throw new Error('Failed to send email');
+    }
+  }
+
+  async sendOTP(email: string, otp: string, type: 'register' | 'login'): Promise<void> {
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2>Your Biye OTP Code</h2>
@@ -40,26 +69,10 @@ export class EmailService {
       </div>
     `;
 
-    try {
-      await transporter.sendMail({
-        from: process.env.EMAIL_FROM || '"Biye" <noreply@biye.com>',
-        to: email,
-        subject: 'Your Biye OTP Code',
-        html,
-      });
-
-      logger.info(`[EmailService] OTP email sent successfully to ${email}`);
-    } catch (error) {
-      logger.error(`[EmailService] Failed to send OTP email to ${email}`, { error });
-      throw new Error('Failed to send OTP email');
-    }
+    return this.sendEmail(email, 'Your Biye OTP Code', html);
   }
 
   async sendWelcomeEmail(email: string, fullName?: string): Promise<void> {
-    logger.info(`[EmailService] Sending welcome email to ${email}`, {
-      fullName,
-    });
-
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2>Welcome to Biye!</h2>
@@ -71,29 +84,13 @@ export class EmailService {
       </div>
     `;
 
-    try {
-      await transporter.sendMail({
-        from: process.env.EMAIL_FROM || '"Biye" <noreply@biye.com>',
-        to: email,
-        subject: 'Welcome to Biye!',
-        html,
-      });
-
-      logger.info(`[EmailService] Welcome email sent successfully to ${email}`);
-    } catch (error) {
-      logger.error(`[EmailService] Failed to send welcome email to ${email}`, { error });
-    }
+    return this.sendEmail(email, 'Welcome to Biye!', html);
   }
 
   async sendCandidateInvite(
     email: string,
     data: { parentName: string; profileId: string }
   ): Promise<void> {
-    logger.info(`[EmailService] Sending candidate invite to ${email}`, {
-      parentName: data.parentName,
-      profileId: data.profileId,
-    });
-
     const inviteLink = `${process.env.FRONTEND_URL || 'https://biye.com'}/candidate/start?email=${encodeURIComponent(email)}`;
 
     const html = `
@@ -114,30 +111,13 @@ export class EmailService {
       </div>
     `;
 
-    try {
-      await transporter.sendMail({
-        from: process.env.EMAIL_FROM || '"Biye" <noreply@biye.com>',
-        to: email,
-        subject: `${data.parentName} has created a profile for you on Biye`,
-        html,
-      });
-
-      logger.info(`[EmailService] Candidate invite sent successfully to ${email}`);
-    } catch (error) {
-      logger.error(`[EmailService] Failed to send candidate invite to ${email}`, { error });
-      throw new Error('Failed to send candidate invite email');
-    }
+    return this.sendEmail(email, `${data.parentName} has created a profile for you on Biye`, html);
   }
 
   async sendGuardianInvite(
     email: string,
     data: { inviterName: string; relationship: string }
   ): Promise<void> {
-    logger.info(`[EmailService] Sending guardian invite to ${email}`, {
-      inviterName: data.inviterName,
-      relationship: data.relationship,
-    });
-
     const inviteLink = `${process.env.FRONTEND_URL || 'https://biye.com'}/guardian/start?email=${encodeURIComponent(email)}`;
 
     const html = `
@@ -158,19 +138,7 @@ export class EmailService {
       </div>
     `;
 
-    try {
-      await transporter.sendMail({
-        from: process.env.EMAIL_FROM || '"Biye" <noreply@biye.com>',
-        to: email,
-        subject: `${data.inviterName} has invited you to Biye`,
-        html,
-      });
-
-      logger.info(`[EmailService] Guardian invite sent successfully to ${email}`);
-    } catch (error) {
-      logger.error(`[EmailService] Failed to send guardian invite to ${email}`, { error });
-      throw new Error('Failed to send guardian invite email');
-    }
+    return this.sendEmail(email, `${data.inviterName} has invited you to Biye`, html);
   }
 }
 

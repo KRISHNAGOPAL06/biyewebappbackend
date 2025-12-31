@@ -66,6 +66,14 @@ const envSchema = z.object({
 
   // Search & Discovery
   MAX_QUERY_COST: z.coerce.number().default(30),
+
+  // Email Configuration
+  EMAIL_HOST: z.string().default('smtp.gmail.com'),
+  EMAIL_PORT: z.coerce.number().default(587),
+  EMAIL_USER: z.string().optional(),
+  EMAIL_PASS: z.string().optional(),
+  EMAIL_FROM: z.string().default('"Biye" <noreply@biye.com>'),
+  RESEND_API_KEY: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;
