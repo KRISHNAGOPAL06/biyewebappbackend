@@ -4,7 +4,7 @@ import { logger } from '../utils/logger.js';
 
 const emailConfig = {
   host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-  port: Number(process.env.EMAIL_PORT) || 587,
+  port: Number(process.env.EMAIL_PORT) || 465, // Default to 465 (SSL) which is more reliable
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
@@ -21,6 +21,10 @@ export const transporter = nodemailer.createTransport({
     user: emailConfig.auth.user,
     pass: emailConfig.auth.pass,
   },
+  // Add timeouts to prevent hanging
+  connectionTimeout: 10000, // 10 seconds
+  greetingTimeout: 10000,
+  socketTimeout: 20000,
 });
 
 // Verify connection configuration
