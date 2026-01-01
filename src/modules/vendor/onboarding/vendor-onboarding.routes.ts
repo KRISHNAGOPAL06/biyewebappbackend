@@ -28,4 +28,7 @@ router.put('/complete', VendorOnboardingController.completeOnboarding);
 // Payment
 router.post('/payment/create-checkout', VendorOnboardingController.createStripeCheckout);
 
+// Coupon validation
+router.post('/coupons/validate', VendorOnboardingController.validateCoupon);
+
 export const vendorOnboardingRoutes = router;

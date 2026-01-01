@@ -176,6 +176,7 @@ export class VendorPlanService {
 
     /**
      * Get vendor with plan details for payment
+     * Uses admin plan pricing with discounts
      */
     async getVendorWithPlan(vendorId: string) {
         const vendor = await prisma.vendor.findUnique({
@@ -186,19 +187,100 @@ export class VendorPlanService {
             return null;
         }
 
-        const plan = await prisma.vendorPlan.findUnique({
+        const vendorPlan = await prisma.vendorPlan.findUnique({
             where: { id: vendor.planId }
         });
+
+        if (!vendorPlan) {
+            return null;
+        }
+
+        console.log('[Payment] Vendor Plan:', { id: vendorPlan.id, tier: vendorPlan.tier, priceYearly: vendorPlan.priceYearly });
+
+        // Get admin plan for dynamic pricing
+        const adminPlan = await prisma.plan.findFirst({
+            where: {
+                category: 'vendor',
+                code: vendorPlan.tier
+            }
+        });
+
+        console.log('[Payment] Admin Plan found:', adminPlan ? {
+            code: adminPlan.code,
+            price: adminPlan.price,
+            discountAmount: adminPlan.discountAmount
+        } : 'NO ADMIN PLAN FOUND');
+
+        // Calculate price: use admin price if available, otherwise fallback to legacy
+        let effectivePrice = adminPlan ? Number(adminPlan.price) : Number(vendorPlan.priceYearly);
+
+        console.log('[Payment] Base effective price:', effectivePrice);
+
+        // Apply sale discount (discountAmount) if available
+        if (adminPlan?.discountAmount && adminPlan.discountAmount > 0) {
+            effectivePrice = Math.max(0, effectivePrice - adminPlan.discountAmount);
+            console.log('[Payment] After discount:', effectivePrice, 'Discount applied:', adminPlan.discountAmount);
+        }
 
         // Normalize plan object for payment gateway
         return {
             ...vendor,
-            plan: plan ? {
-                ...plan,
-                price: Number(plan.priceYearly),
-                code: plan.tier, // Use tier as code
-                durationDays: 365
-            } : null
+            plan: {
+                ...vendorPlan,
+                name: adminPlan?.name || vendorPlan.name,
+                price: effectivePrice,
+                originalPrice: adminPlan ? Number(adminPlan.price) : Number(vendorPlan.priceYearly),
+                code: vendorPlan.tier,
+                durationDays: adminPlan?.durationDays || 365
+            }
+        };
+    }
+
+    /**
+     * Validate a coupon code for a specific plan
+     * Coupons are stored in the Admin Plan table with the couponCode field
+     */
+    async validateCoupon(code: string, planId: string) {
+        // Get the vendor plan
+        const vendorPlan = await prisma.vendorPlan.findUnique({
+            where: { id: planId }
+        });
+
+        if (!vendorPlan) {
+            return { valid: false, message: 'Plan not found' };
+        }
+
+        // Find matching admin plan by tier to check coupon
+        const adminPlan = await prisma.plan.findFirst({
+            where: {
+                category: 'vendor',
+                code: vendorPlan.tier
+            }
+        });
+
+        if (!adminPlan) {
+            return { valid: false, message: 'No coupon available for this plan' };
+        }
+
+        // Check if coupon code matches
+        if (!adminPlan.couponCode || adminPlan.couponCode.toUpperCase() !== code.toUpperCase()) {
+            return { valid: false, message: 'Invalid coupon code' };
+        }
+
+        // Check if coupon is expired
+        if (adminPlan.couponValidUntil && new Date(adminPlan.couponValidUntil) < new Date()) {
+            return { valid: false, message: 'Coupon has expired' };
+        }
+
+        // Check if there's a discount percent set
+        if (!adminPlan.discountPercent || adminPlan.discountPercent <= 0) {
+            return { valid: false, message: 'Coupon has no discount configured' };
+        }
+
+        return {
+            valid: true,
+            discountPercent: adminPlan.discountPercent,
+            code: adminPlan.couponCode
         };
     }
 }
