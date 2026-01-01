@@ -1,67 +1,107 @@
+/**
+ * Seed script for vendor plans
+ * Run with: npx tsx scripts/seed-vendor-plans.ts
+ */
 
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, VendorPlanTier } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-const vendorPlans = [
+// Hardcoded vendor plans - features are fixed, only prices editable by admin
+const VENDOR_PLANS = [
     {
-        code: 'VENDOR_BASIC',
         name: 'Basic Presence',
-        price: 999,
-        durationDays: 365,
-        category: 'vendor',
-        isInviteOnly: false,
-        features: ['3 photos', 'Basic analytics', 'Standard listing']
+        tier: 'BASIC' as VendorPlanTier,
+        priceYearly: 4999.00, // BDT
+        maxPhotos: 3,
+        maxVideos: 0,
+        hasAnalytics: false,
+        hasPriority: false,
+        hasVerifiedBadge: false,
     },
     {
-        code: 'VENDOR_FEATURED',
         name: 'Featured Spotlight',
-        price: 2499,
-        durationDays: 365,
-        category: 'vendor',
-        isInviteOnly: false,
-        features: ['10 photos', '1 video', 'Priority support', 'Highlight badge']
+        tier: 'FEATURED' as VendorPlanTier,
+        priceYearly: 9999.00, // BDT
+        maxPhotos: 10,
+        maxVideos: 2,
+        hasAnalytics: true,
+        hasPriority: true,
+        hasVerifiedBadge: false,
     },
     {
-        code: 'VENDOR_PREMIUM',
         name: 'Premium Showcase',
-        price: 4999,
-        durationDays: 365,
-        category: 'vendor',
-        isInviteOnly: false,
-        features: ['Unlimited photos', '5 videos', 'Top placement', 'Verified badge', 'Analytics dashboard']
+        tier: 'PREMIUM' as VendorPlanTier,
+        priceYearly: 19999.00, // BDT
+        maxPhotos: -1, // unlimited
+        maxVideos: 5,
+        hasAnalytics: true,
+        hasPriority: true,
+        hasVerifiedBadge: true,
     },
     {
-        code: 'VENDOR_ELITE',
         name: 'Exclusive Elite',
-        price: 9999,
-        durationDays: 365,
-        category: 'vendor',
-        isInviteOnly: true,
-        features: ['All features', 'Dedicated support', 'Category lock', 'Custom branding']
-    }
+        tier: 'ELITE' as VendorPlanTier,
+        priceYearly: 49999.00, // BDT
+        maxPhotos: -1, // unlimited
+        maxVideos: -1, // unlimited
+        hasAnalytics: true,
+        hasPriority: true,
+        hasVerifiedBadge: true,
+    },
 ];
 
-async function seed() {
-    console.log('Creating vendor plans in Plan model...');
-    for (const plan of vendorPlans) {
-        const existing = await prisma.plan.findUnique({ where: { code: plan.code } });
-        if (!existing) {
-            await prisma.plan.create({ data: plan });
-            console.log('Created:', plan.name);
+async function seedVendorPlans() {
+    console.log('🌱 Seeding vendor plans...');
+
+    for (const plan of VENDOR_PLANS) {
+        const existing = await prisma.vendorPlan.findUnique({
+            where: { tier: plan.tier }
+        });
+
+        if (existing) {
+            // Update existing plan features (price managed separately by admin)
+            await prisma.vendorPlan.update({
+                where: { tier: plan.tier },
+                data: {
+                    name: plan.name,
+                    maxPhotos: plan.maxPhotos,
+                    maxVideos: plan.maxVideos,
+                    hasAnalytics: plan.hasAnalytics,
+                    hasPriority: plan.hasPriority,
+                    hasVerifiedBadge: plan.hasVerifiedBadge,
+                }
+            });
+            console.log(`  ✅ Updated: ${plan.name}`);
         } else {
-            console.log('Already exists:', plan.name);
-            // Optional: Update if exists to ensure consistency
-            await prisma.plan.update({
-                where: { code: plan.code },
+            // Create new plan with default price
+            await prisma.vendorPlan.create({
                 data: plan
             });
-            console.log('Updated:', plan.name);
+            console.log(`  ✅ Created: ${plan.name}`);
         }
     }
-    console.log('Vendor plans seeding complete!');
+
+    // List all plans
+    const allPlans = await prisma.vendorPlan.findMany({
+        orderBy: { priceYearly: 'asc' }
+    });
+
+    console.log('\n📋 All vendor plans:');
+    allPlans.forEach(p => {
+        const photos = p.maxPhotos === -1 ? 'unlimited' : p.maxPhotos;
+        const videos = p.maxVideos === -1 ? 'unlimited' : p.maxVideos;
+        console.log(`  - ${p.name} (${p.tier}): ৳${p.priceYearly} | Photos: ${photos} | Videos: ${videos}`);
+    });
+
+    console.log('\n✨ Vendor plans seeded successfully!');
 }
 
-seed()
-    .catch(console.error)
-    .finally(() => prisma.$disconnect());
+seedVendorPlans()
+    .catch((e) => {
+        console.error('Error seeding vendor plans:', e);
+        process.exit(1);
+    })
+    .finally(async () => {
+        await prisma.$disconnect();
+    });

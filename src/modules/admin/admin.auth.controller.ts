@@ -1,9 +1,9 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { PrismaClient } from '@prisma/client';
+// admin.auth.controller.ts
 
-const prisma = new PrismaClient();
+// Prisma singleton available from '../../config/db.js' if needed
 
 export class AdminAuthController {
     // Admin Login

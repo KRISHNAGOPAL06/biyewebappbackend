@@ -1,8 +1,8 @@
-import { PrismaClient } from '@prisma/client';
+// vendor-profile.service.ts
 import { VendorProfileUpdateDTO } from '../vendor.dto.js';
 import { AppError } from '../../../utils/AppError.js';
 
-const prisma = new PrismaClient();
+import { prisma } from '../../../config/db.js';
 
 class VendorProfileService {
     /**

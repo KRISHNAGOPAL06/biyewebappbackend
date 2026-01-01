@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+// vendor-admin.service.ts
 import { VendorApprovalDTO } from '../vendor.dto.js';
 import { AppError } from '../../../utils/AppError.js';
 import { logger } from '../../../utils/logger.js';
@@ -6,7 +6,7 @@ import { logger } from '../../../utils/logger.js';
 // VendorStatus type - matches Prisma enum
 type VendorStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'SUSPENDED';
 
-const prisma = new PrismaClient();
+import { prisma } from '../../../config/db.js';
 
 class VendorAdminService {
     /**

@@ -1,8 +1,8 @@
-import { PrismaClient } from '@prisma/client';
+// category.service.ts
 import { ServiceCategoryCreateDTO, ServiceCategoryUpdateDTO } from '../vendor.dto.js';
 import { AppError } from '../../../utils/AppError.js';
 
-const prisma = new PrismaClient();
+import { prisma } from '../../../config/db.js';
 
 class CategoryService {
     /**

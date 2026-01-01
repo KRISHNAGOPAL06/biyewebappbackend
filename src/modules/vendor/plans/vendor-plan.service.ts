@@ -1,16 +1,90 @@
 import { VendorPlan } from '@prisma/client';
-import { prisma } from '../../../prisma.js';
+import { prisma } from '../../../config/db.js';
 import { AppError } from '../../../utils/AppError.js';
 
 export class VendorPlanService {
 
     /**
      * Get all available vendor plans from the VendorPlan table
+     * Transforms the data for frontend compatibility
      */
-    async getPlans(): Promise<VendorPlan[]> {
-        return await prisma.vendorPlan.findMany({
+    async getPlans() {
+        const plans = await prisma.vendorPlan.findMany({
             orderBy: { priceYearly: 'asc' }
         });
+
+        // Transform plans to include features array for frontend
+        return plans.map(plan => ({
+            id: plan.id,
+            name: plan.name,
+            tier: plan.tier,
+            price: Number(plan.priceYearly), // Frontend expects 'price'
+            priceYearly: Number(plan.priceYearly),
+            durationDays: 365,
+            maxPhotos: plan.maxPhotos,
+            maxVideos: plan.maxVideos,
+            hasAnalytics: plan.hasAnalytics,
+            hasPriority: plan.hasPriority,
+            hasVerifiedBadge: plan.hasVerifiedBadge,
+            // Generate features array from plan properties (hardcoded descriptions)
+            features: this.generateFeatures(plan)
+        }));
+    }
+
+    /**
+     * Generate human-readable features array from plan properties
+     */
+    private generateFeatures(plan: VendorPlan): string[] {
+        const features: string[] = [];
+
+        // Photos
+        if (plan.maxPhotos === -1) {
+            features.push('Unlimited photos');
+        } else {
+            features.push(`Up to ${plan.maxPhotos} photos`);
+        }
+
+        // Videos
+        if (plan.maxVideos === -1) {
+            features.push('Unlimited videos');
+        } else if (plan.maxVideos > 0) {
+            features.push(`${plan.maxVideos} video${plan.maxVideos > 1 ? 's' : ''}`);
+        }
+
+        // Add logo for all plans
+        features.push('Business logo');
+
+        // Analytics
+        if (plan.hasAnalytics) {
+            features.push('Analytics dashboard');
+        } else {
+            features.push('Basic insights');
+        }
+
+        // Priority placement
+        if (plan.hasPriority) {
+            features.push('Priority search placement');
+        } else {
+            features.push('Standard listing');
+        }
+
+        // Verified badge
+        if (plan.hasVerifiedBadge) {
+            features.push('Verified badge');
+        }
+
+        // Tier-specific features
+        if (plan.tier === 'ELITE') {
+            features.push('Top search spot');
+            features.push('Category lock');
+            features.push('Dedicated support');
+        } else if (plan.tier === 'PREMIUM') {
+            features.push('Top placement');
+        } else if (plan.tier === 'FEATURED') {
+            features.push('Highlighted listing');
+        }
+
+        return features;
     }
 
     /**

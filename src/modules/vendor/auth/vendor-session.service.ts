@@ -1,6 +1,6 @@
-import { PrismaClient } from '@prisma/client';
+// vendor-session.service.ts
 
-const prisma = new PrismaClient();
+import { prisma } from '../../../config/db.js';
 
 export interface VendorSessionInfo {
     deviceId?: string;

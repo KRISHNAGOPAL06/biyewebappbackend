@@ -1,8 +1,8 @@
 import jwt from 'jsonwebtoken';
-import { PrismaClient } from '@prisma/client';
+// vendor-token.service.ts (no direct prisma usage, but keeping consistent)
 import { VendorJWTPayload } from '../middleware/vendor-auth.middleware.js';
 
-const prisma = new PrismaClient();
+// Prisma singleton available from '../../../config/db.js' if needed
 
 const ACCESS_TOKEN_EXPIRY = '15m';
 const REFRESH_TOKEN_EXPIRY = '7d';

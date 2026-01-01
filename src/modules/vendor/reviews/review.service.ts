@@ -1,9 +1,9 @@
-import { PrismaClient } from '@prisma/client';
+// review.service.ts
 import { ReviewCreateDTO, ReviewReplyDTO } from '../vendor.dto.js';
 import { AppError } from '../../../utils/AppError.js';
 import { vendorServiceService } from '../services/vendor-service.service.js';
 
-const prisma = new PrismaClient();
+import { prisma } from '../../../config/db.js';
 
 class ReviewService {
     /**

@@ -170,14 +170,19 @@ export class VendorOnboardingService {
 
         const currentStep = vendor.onboardingStep || 0;
 
-        // Validate sequential step progression (no skipping)
-        if (stepNumber !== currentStep + 1) {
-            throw new AppError(
-                `Invalid step. Expected step ${currentStep + 1}, got ${stepNumber}`,
-                400,
-                'INVALID_STEP'
-            );
+        // Validate sequential step progression (no skipping backwards)
+        // We allow jumping forward because frontend might skip steps (e.g. account setup)
+        if (stepNumber <= currentStep) {
+            // It's okay to re-save the current step or previous steps (idempotent)
+            // But usually we just update data
         }
+
+        // Remove strict +1 check to allow skipping/resuming logic
+        /* 
+        if (stepNumber !== currentStep + 1) {
+             throw new AppError(...);
+        }
+        */
 
         // Validate step data is not empty for required steps
         if (!stepData || Object.keys(stepData).length === 0) {

@@ -1,4 +1,4 @@
-import { PrismaClient, VendorStatus } from '@prisma/client';
+import { VendorStatus } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { VendorRegisterDTO, VendorLoginDTO, VendorVerifyOTPDTO } from '../vendor.dto.js';
@@ -8,7 +8,7 @@ import { AppError } from '../../../utils/AppError.js';
 import { logger } from '../../../utils/logger.js';
 import { emailService } from '../../auth/email.service.js';
 
-const prisma = new PrismaClient();
+import { prisma } from '../../../config/db.js';
 
 const OTP_EXPIRY_MINUTES = 10;
 const SALT_ROUNDS = 12;
@@ -21,6 +21,8 @@ export interface VendorAuthResult {
         ownerName: string;
         status: VendorStatus;
         onboardingStatus: string;
+        onboardingStep: number;  // Current step (0 = registered, 1+ = in progress)
+        planId: string | null;   // Selected plan ID
         isVerified: boolean;
     };
     accessToken: string;
@@ -199,6 +201,8 @@ class VendorAuthService {
                 ownerName: vendor.ownerName,
                 status: vendor.status,
                 onboardingStatus: vendor.onboardingStatus,
+                onboardingStep: vendor.onboardingStep || 0,
+                planId: vendor.planId || null,
                 isVerified: true,
             },
             ...tokens,
@@ -302,6 +306,8 @@ class VendorAuthService {
                 ownerName: vendor.ownerName,
                 status: vendor.status,
                 onboardingStatus: vendor.onboardingStatus,
+                onboardingStep: vendor.onboardingStep || 0,
+                planId: vendor.planId || null,
                 isVerified: true,
             },
             ...tokens,
@@ -341,6 +347,8 @@ class VendorAuthService {
                 ownerName: vendor.ownerName,
                 status: vendor.status,
                 onboardingStatus: vendor.onboardingStatus,
+                onboardingStep: vendor.onboardingStep || 0,
+                planId: vendor.planId || null,
                 isVerified: vendor.isVerified,
             },
         };

@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+// admin.service.ts
 import {
     DashboardStats,
     UserListItem,
@@ -9,7 +9,7 @@ import {
     PaginatedResponse
 } from './admin.types';
 
-const prisma = new PrismaClient();
+import { prisma } from '../../config/db.js';
 
 export class AdminService {
     // Dashboard Stats
