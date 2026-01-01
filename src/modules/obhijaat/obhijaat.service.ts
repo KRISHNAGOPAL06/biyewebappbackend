@@ -2,18 +2,11 @@
 import { prisma } from '../../prisma.js';
 import { logger } from '../../utils/logger.js';
 import { ObhijaatInvitationRequest, ObhijaatInvitationResponse, ObhijaatMemberInfo } from './obhijaat.types.js';
-import nodemailer from 'nodemailer';
+import { transporter } from '../../config/email.js';
 
 // Email transporter for admin notifications
-const transporter = nodemailer.createTransport({
-    host: process.env.EMAIL_HOST || 'smtp.ethereal.email',
-    port: Number(process.env.EMAIL_PORT) || 587,
-    secure: false,
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-    },
-});
+// Using shared transporter from config/email.ts
+
 
 class ObhijaatService {
     /**

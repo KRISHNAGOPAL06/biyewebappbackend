@@ -1,51 +1,28 @@
-import { Resend } from 'resend';
+import { transporter } from '../../config/email.js';
 import { logger } from '../../utils/logger.js';
 import { env } from '../../config/env.js';
 
-const resend = env.RESEND_API_KEY ? new Resend(env.RESEND_API_KEY) : null;
-
-if (!resend && env.NODE_ENV === 'production') {
-  logger.error('[EmailService] RESEND_API_KEY is missing in production!');
-} else {
-  logger.info('[EmailService] Resend service initialized');
-}
-
 export class EmailService {
   /**
-   * Generic method to send an email using Resend.
+   * Generic method to send an email using Nodemailer (Gmail SMTP).
    */
   async sendEmail(to: string, subject: string, html: string): Promise<void> {
     logger.info(`[EmailService] Sending email to ${to}`, { subject });
 
-    if (env.NODE_ENV === 'development' && !env.RESEND_API_KEY) {
-      logger.warn('[EmailService] No RESEND_API_KEY found. Skipping email send (DEV MODE).');
-      logger.debug(`[EmailService] Target: ${to}, Subject: ${subject}, Content: ${html.substring(0, 100)}...`);
-      return;
-    }
-
-    if (!resend) {
-      logger.error('[EmailService] Cannot send email: Resend client not initialized');
-      throw new Error('Email service not available');
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+      logger.error('[EmailService] Cannot send email: SMTP credentials missing');
+      throw new Error('Email service not configured');
     }
 
     try {
-      const { data, error } = await resend.emails.send({
-        from: env.EMAIL_FROM || 'Biye <onboarding@resend.dev>',
+      const info = await transporter.sendMail({
+        from: process.env.EMAIL_FROM || '"Biye Support" <noreply@biye.com>',
         to,
         subject,
         html,
       });
 
-      if (error) {
-        if (error.message.includes('domain') && error.message.includes('not verified')) {
-          logger.error(`[EmailService] DOMAIN VERIFICATION ERROR: Your EMAIL_FROM ("${env.EMAIL_FROM}") is not verified in Resend. FIX: Change it to "Biye <onboarding@resend.dev>" in your environment variables.`);
-          throw new Error('Email delivery failed: Domain not verified. Please use onboarding@resend.dev');
-        }
-        logger.error(`[EmailService] Resend API error:`, { error });
-        throw new Error(`Failed to send email: ${error.message}`);
-      }
-
-      logger.info(`[EmailService] Email sent successfully to ${to}`, { messageId: data?.id });
+      logger.info(`[EmailService] Email sent successfully to ${to}`, { messageId: info.messageId });
     } catch (error) {
       logger.error(`[EmailService] Failed to send email to ${to}`, {
         error: error instanceof Error ? error.message : 'Unknown error',
