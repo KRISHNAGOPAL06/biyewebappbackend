@@ -8,27 +8,50 @@ export class VendorPlanService {
      * Get all available vendor plans from the VendorPlan table
      * Transforms the data for frontend compatibility
      */
+    /**
+     * Get all available vendor plans from the VendorPlan table
+     * Transforms the data for frontend compatibility
+     */
     async getPlans() {
-        const plans = await prisma.vendorPlan.findMany({
+        // Fetch legacy configuration (limits, tiers)
+        const vendorPlans = await prisma.vendorPlan.findMany({
             orderBy: { priceYearly: 'asc' }
         });
 
+        // Fetch dynamic pricing/metadata from Admin Plans
+        const adminPlans = await prisma.plan.findMany({
+            where: { category: 'vendor' }
+        });
+
         // Transform plans to include features array for frontend
-        return plans.map(plan => ({
-            id: plan.id,
-            name: plan.name,
-            tier: plan.tier,
-            price: Number(plan.priceYearly), // Frontend expects 'price'
-            priceYearly: Number(plan.priceYearly),
-            durationDays: 365,
-            maxPhotos: plan.maxPhotos,
-            maxVideos: plan.maxVideos,
-            hasAnalytics: plan.hasAnalytics,
-            hasPriority: plan.hasPriority,
-            hasVerifiedBadge: plan.hasVerifiedBadge,
-            // Generate features array from plan properties (hardcoded descriptions)
-            features: this.generateFeatures(plan)
-        }));
+        return vendorPlans.map(plan => {
+            // Find matching admin plan by Tier Code
+            const adminVersion = adminPlans.find(ap => ap.code === plan.tier);
+
+            // Use Admin price if available, else fallback to legacy
+            const effectivePrice = adminVersion ? Number(adminVersion.price) : Number(plan.priceYearly);
+
+            return {
+                id: plan.id,
+                name: adminVersion?.name || plan.name,
+                tier: plan.tier,
+                price: effectivePrice, // Current price (Monthly)
+                priceYearly: effectivePrice * 12, // For legacy logic
+
+                // Pass dynamic discount info
+                discountAmount: adminVersion?.discountAmount || 0,
+                discountPercent: adminVersion?.discountPercent || 0,
+
+                durationDays: adminVersion?.durationDays || 365,
+                maxPhotos: plan.maxPhotos,
+                maxVideos: plan.maxVideos,
+                hasAnalytics: plan.hasAnalytics,
+                hasPriority: plan.hasPriority,
+                hasVerifiedBadge: plan.hasVerifiedBadge,
+                // Generate features array from plan properties (hardcoded descriptions)
+                features: this.generateFeatures(plan)
+            };
+        });
     }
 
     /**

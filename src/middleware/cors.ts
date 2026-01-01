@@ -12,6 +12,12 @@ export const corsMiddleware = cors({
     const allowedOrigins = (env.ALLOWED_ORIGINS ?? []).map((o) => o.replace(/\/+$/, '').toLowerCase());
     const normalizedOrigin = origin.replace(/\/+$/, '').toLowerCase();
 
+    // Generic Dev Fallback: Allow common frontend ports strictly
+    if (normalizedOrigin === 'http://localhost:5173' || normalizedOrigin === 'http://localhost:3000' || normalizedOrigin === 'http://localhost:5174') {
+      logger.info(`[CORS] Allowed dev origin: ${origin}`);
+      return callback(null, true);
+    }
+
     // Check for exact match or wildcard match (e.g. if ALLOWED_ORIGINS has "http://localhost:5173/*")
     const isAllowed = allowedOrigins.some((o) => {
       if (o.endsWith('/*')) {
