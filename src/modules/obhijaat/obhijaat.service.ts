@@ -1,11 +1,11 @@
-// Obhijaat Elite Membership - Service Layer
 import { prisma } from '../../prisma.js';
 import { logger } from '../../utils/logger.js';
 import { ObhijaatInvitationRequest, ObhijaatInvitationResponse, ObhijaatMemberInfo } from './obhijaat.types.js';
-import { transporter } from '../../config/email.js';
+// import { transporter } from '../../config/email.js'; // Removed
+import { emailService } from '../auth/email.service.js';
 
 // Email transporter for admin notifications
-// Using shared transporter from config/email.ts
+// Using shared emailService
 
 
 class ObhijaatService {
@@ -124,6 +124,8 @@ class ObhijaatService {
         return invitations.map(this.formatInvitationResponse);
     }
 
+
+
     /**
      * Send email notification to admin about new invitation request
      */
@@ -237,12 +239,11 @@ class ObhijaatService {
     `;
 
         try {
-            await transporter.sendMail({
-                from: process.env.EMAIL_FROM || '"Biye Co." <noreply@biyeco.in>',
-                to: adminEmail,
-                subject: `[Obhijaat] New Invitation Request from ${member.displayName || member.email}`,
-                html,
-            });
+            await emailService.sendEmail(
+                adminEmail,
+                `[Obhijaat] New Invitation Request from ${member.displayName || member.email}`,
+                html
+            );
 
             logger.info('Obhijaat admin notification sent', {
                 adminEmail,

@@ -1,31 +1,48 @@
-import { transporter } from '../../config/email.js';
+import axios from 'axios';
+import { emailConfig } from '../../config/email.js';
 import { logger } from '../../utils/logger.js';
 import { env } from '../../config/env.js';
 
 export class EmailService {
   /**
-   * Generic method to send an email using Nodemailer (Gmail SMTP).
+   * Send email using Brevo HTTP API
    */
   async sendEmail(to: string, subject: string, html: string): Promise<void> {
     logger.info(`[EmailService] Sending email to ${to}`, { subject });
 
-    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-      logger.error('[EmailService] Cannot send email: SMTP credentials missing');
+    if (!emailConfig.brevoApiKey) {
+      if (env.NODE_ENV === 'development') {
+        logger.warn('[EmailService] BREVO_API_KEY missing. Skipping email send (DEV MODE).');
+        return;
+      }
+      logger.error('[EmailService] Cannot send email: BREVO_API_KEY missing');
       throw new Error('Email service not configured');
     }
 
     try {
-      const info = await transporter.sendMail({
-        from: process.env.EMAIL_FROM || '"Biye Support" <noreply@biye.com>',
-        to,
-        subject,
-        html,
-      });
+      const response = await axios.post(
+        emailConfig.url,
+        {
+          sender: emailConfig.sender,
+          to: [{ email: to }],
+          subject: subject,
+          htmlContent: html,
+        },
+        {
+          headers: {
+            'api-key': emailConfig.brevoApiKey,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          timeout: 10000, // 10s timeout
+        }
+      );
 
-      logger.info(`[EmailService] Email sent successfully to ${to}`, { messageId: info.messageId });
-    } catch (error) {
+      logger.info(`[EmailService] Email sent successfully to ${to}`, { messageId: response.data.messageId });
+    } catch (error: any) {
       logger.error(`[EmailService] Failed to send email to ${to}`, {
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error.response?.data || error.message,
+        status: error.response?.status,
         subject,
       });
       throw new Error('Failed to send email');
