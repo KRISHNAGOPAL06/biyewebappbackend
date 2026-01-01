@@ -123,4 +123,127 @@ export class VendorOnboardingService {
         // Add logic for checking emptiness
         return required.filter(field => !profile[field]);
     }
+
+    // ==================== STEP-LEVEL TRACKING ====================
+
+    /**
+     * Get current onboarding progress
+     * Returns current step number and saved form data
+     */
+    async getProgress(vendorId: string) {
+        const vendor = await prisma.vendor.findUnique({
+            where: { id: vendorId },
+            include: { profile: true }
+        }) as any;
+
+        if (!vendor) {
+            throw new AppError('Vendor not found', 404, 'VENDOR_NOT_FOUND');
+        }
+
+        return {
+            currentStep: vendor.onboardingStep || 0,
+            savedData: vendor.onboardingData || {},
+            onboardingStatus: vendor.onboardingStatus,
+            vendorInfo: {
+                email: vendor.email,
+                phoneNumber: vendor.phoneNumber,
+                businessName: vendor.businessName,
+                ownerName: vendor.ownerName,
+            },
+            profile: vendor.profile,
+        };
+    }
+
+    /**
+     * Save a completed step
+     * Validates step number is sequential (no skipping)
+     * Merges new data with existing saved data
+     */
+    async saveStep(vendorId: string, stepNumber: number, stepData: Record<string, any>) {
+        const vendor = await prisma.vendor.findUnique({
+            where: { id: vendorId }
+        }) as any;
+
+        if (!vendor) {
+            throw new AppError('Vendor not found', 404, 'VENDOR_NOT_FOUND');
+        }
+
+        const currentStep = vendor.onboardingStep || 0;
+
+        // Validate sequential step progression (no skipping)
+        if (stepNumber !== currentStep + 1) {
+            throw new AppError(
+                `Invalid step. Expected step ${currentStep + 1}, got ${stepNumber}`,
+                400,
+                'INVALID_STEP'
+            );
+        }
+
+        // Validate step data is not empty for required steps
+        if (!stepData || Object.keys(stepData).length === 0) {
+            throw new AppError('Step data is required', 400, 'EMPTY_STEP_DATA');
+        }
+
+        // Merge new data with existing saved data
+        const existingData = vendor.onboardingData || {};
+        const mergedData = { ...existingData, ...stepData };
+
+        // Update vendor with new step and merged data
+        const updatedVendor = await prisma.vendor.update({
+            where: { id: vendorId },
+            data: {
+                onboardingStep: stepNumber,
+                onboardingData: mergedData,
+            } as any
+        }) as any;
+
+        return {
+            currentStep: updatedVendor.onboardingStep,
+            savedData: updatedVendor.onboardingData,
+        };
+    }
+
+    /**
+     * Complete the onboarding process
+     * Validates all required steps are done
+     * Updates onboardingStatus to PENDING_APPROVAL
+     */
+    async completeOnboarding(vendorId: string) {
+        const TOTAL_STEPS = 20; // Total steps in the conversational flow
+
+        const vendor = await prisma.vendor.findUnique({
+            where: { id: vendorId }
+        }) as any;
+
+        if (!vendor) {
+            throw new AppError('Vendor not found', 404, 'VENDOR_NOT_FOUND');
+        }
+
+        const currentStep = vendor.onboardingStep || 0;
+
+        // Validate all steps completed
+        if (currentStep < TOTAL_STEPS) {
+            throw new AppError(
+                `Onboarding incomplete. Completed ${currentStep}/${TOTAL_STEPS} steps`,
+                400,
+                'ONBOARDING_INCOMPLETE'
+            );
+        }
+
+        // Already completed check
+        if (vendor.onboardingStatus === 'PENDING_APPROVAL' || vendor.onboardingStatus === 'APPROVED') {
+            throw new AppError('Onboarding already completed', 400, 'ALREADY_COMPLETED');
+        }
+
+        // Update status
+        const updatedVendor = await prisma.vendor.update({
+            where: { id: vendorId },
+            data: { onboardingStatus: 'PENDING_APPROVAL' }
+        });
+
+        return {
+            onboardingStatus: updatedVendor.onboardingStatus,
+            message: 'Onboarding completed successfully. Your profile is pending approval.',
+        };
+    }
 }

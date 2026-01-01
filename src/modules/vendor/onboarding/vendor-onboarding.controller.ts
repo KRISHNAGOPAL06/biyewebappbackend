@@ -95,6 +95,61 @@ export class VendorOnboardingController {
         }
     }
 
+    // --- Step Progress Tracking ---
+
+    static async getProgress(req: Request, res: Response, next: NextFunction) {
+        try {
+            const vendorId = req.vendorId!;
+            const progress = await onboardingService.getProgress(vendorId);
+
+            res.json({
+                success: true,
+                data: progress
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    static async saveStep(req: Request, res: Response, next: NextFunction) {
+        try {
+            const vendorId = req.vendorId!;
+            const stepNumber = parseInt(req.params.stepNumber, 10);
+            const stepData = req.body;
+
+            if (isNaN(stepNumber) || stepNumber < 1) {
+                throw new AppError('Invalid step number', 400, 'INVALID_STEP_NUMBER');
+            }
+
+            const result = await onboardingService.saveStep(vendorId, stepNumber, stepData);
+
+            res.json({
+                success: true,
+                message: `Step ${stepNumber} saved successfully`,
+                data: result
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    static async completeOnboarding(req: Request, res: Response, next: NextFunction) {
+        try {
+            const vendorId = req.vendorId!;
+            const result = await onboardingService.completeOnboarding(vendorId);
+
+            res.json({
+                success: true,
+                message: result.message,
+                data: {
+                    onboardingStatus: result.onboardingStatus
+                }
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+
     // --- Payment ---
 
     static async getSelectedPlan(req: Request, res: Response, next: NextFunction) {
