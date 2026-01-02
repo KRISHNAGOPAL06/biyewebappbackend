@@ -23,6 +23,7 @@ export interface PrivateMessagePayload {
   toUserId: string;
   content: string;
   metadata?: Record<string, any>;
+  tempId?: string;
 }
 
 export interface MessageResponse {
@@ -35,6 +36,7 @@ export interface MessageResponse {
   delivered: boolean;
   read: boolean;
   createdAt: Date;
+  tempId?: string;
 }
 
 export interface ThreadWithPreview {
@@ -86,7 +88,7 @@ export interface ChatEvents {
   delivery_receipt: (receipt: DeliveryReceipt) => void;
   read_receipt: (receipt: ReadReceipt) => void;
   rate_limited: () => void;
-  error: (error: { message: string; code?: string }) => void;
+  error: (error: { message: string; code?: string; tempId?: string }) => void;
   ping: () => void;
   pong: () => void;
 }

@@ -71,28 +71,44 @@ export function attachChat(io: Server): void {
           return;
         }
 
-        const { threadId, toUserId, content, metadata } = payload;
+        const { threadId, toUserId, content, metadata, tempId } = payload;
 
         if (!content || content.trim().length === 0) {
-          socket.emit('error', { message: 'Message content is required', code: 'EMPTY_CONTENT' });
+          socket.emit('error', {
+            message: 'Message content is required',
+            code: 'EMPTY_CONTENT',
+            tempId
+          });
           return;
         }
 
         if (!toUserId && !threadId) {
-          socket.emit('error', { message: 'toUserId or threadId is required', code: 'MISSING_RECIPIENT' });
+          socket.emit('error', {
+            message: 'toUserId or threadId is required',
+            code: 'MISSING_RECIPIENT',
+            tempId
+          });
           return;
         }
 
         if (threadId) {
           const thread = await chatService.getThread(threadId, userId);
           if (!thread) {
-            socket.emit('error', { message: 'Thread not found or access denied', code: 'THREAD_NOT_FOUND' });
+            socket.emit('error', {
+              message: 'Thread not found or access denied',
+              code: 'THREAD_NOT_FOUND',
+              tempId
+            });
             return;
           }
         } else if (toUserId) {
           const canChat = await chatService.canUserChat(userId, toUserId);
           if (!canChat) {
-            socket.emit('error', { message: 'Cannot create chat. Mutual match required.', code: 'NOT_ALLOWED' });
+            socket.emit('error', {
+              message: 'Cannot create chat. Mutual match required.',
+              code: 'NOT_ALLOWED',
+              tempId
+            });
             return;
           }
         }
@@ -105,12 +121,19 @@ export function attachChat(io: Server): void {
           metadata,
         });
 
+        // Relay the tempId back so frontend can settle the optimistic UI
+        (message as any).tempId = tempId;
+
         socket.emit('message', message);
 
         logger.info(`Message sent from ${userId} to ${toUserId} in thread ${message.threadId}`);
       } catch (error: any) {
         logger.error('Error handling private_message:', error);
-        socket.emit('error', { message: error.message || 'Failed to send message', code: 'MESSAGE_FAILED' });
+        socket.emit('error', {
+          message: error.message || 'Failed to send message',
+          code: 'MESSAGE_FAILED',
+          tempId: payload.tempId
+        });
       }
     });
 
