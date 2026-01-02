@@ -21,6 +21,7 @@
     "prisma:migrate": "prisma migrate dev --schema=./prisma/schema.prisma",
     "prisma:deploy": "prisma migrate deploy --schema=./prisma/schema.prisma",
     "prisma:studio": "prisma studio --schema=./prisma/schema.prisma",
+    "seed:plans": "tsx src/modules/payments/plan.seed.ts",
     "check": "tsc --noEmit"
   },
   "keywords": [
