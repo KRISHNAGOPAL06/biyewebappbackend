@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { planService } from './plan.service.js';
 import { subscriptionService } from './subscription.service.js';
+import { env } from '../../config/env.js';
 import { paymentService } from './payment.service.js';
 import { entitlementService } from './entitlement.service.js';
 import { CheckoutDTO, PauseSubscriptionDTO } from './payment.dto.js';
@@ -350,7 +351,6 @@ export class PaymentController {
         ...req.body,
       };
       const { paymentId, tran_id, session_id } = data;
-      const { env } = await import('../../config/env.js');
       const frontendUrl = env.FRONTEND_URL || 'http://localhost:3000';
 
       console.log(`[Payment] Callback resolved frontendUrl: ${frontendUrl}`);
@@ -385,7 +385,6 @@ export class PaymentController {
       res.redirect(`${frontendUrl}/payment/cancelled?paymentId=${resolvedPaymentId}`);
     } catch (err: any) {
       logger.error('Payment callback error:', err);
-      const { env } = await import('../../config/env.js');
       const frontendUrl = env.FRONTEND_URL || 'http://localhost:3000';
       // encodeURIComponent to ensure URL validity
       const errorMsg = err?.message || 'Payment processing failed';

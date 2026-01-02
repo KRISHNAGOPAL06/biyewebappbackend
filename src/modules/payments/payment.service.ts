@@ -15,6 +15,7 @@ import { applepayGateway } from './gateways/applepay.gateway.js';
 import { eventBus } from '../../events/eventBus.js';
 import { logger } from '../../utils/logger.js';
 import { currencyService } from './currency.service.js';
+import { env } from '../../config/env.js';
 
 import { prisma } from '../../prisma.js';
 
@@ -117,7 +118,6 @@ export class PaymentService {
       totalDiscount,
     });
 
-    const { env } = await import('../../config/env.js');
     const baseUrl = env.APP_BASE_URL || 'http://localhost:5000';
     logger.info(`[Payment] 🚀 Generating gateway return URLs with baseUrl: ${baseUrl}`);
 
