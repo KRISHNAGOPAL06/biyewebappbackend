@@ -353,6 +353,8 @@ export class PaymentController {
       const { env } = await import('../../config/env.js');
       const frontendUrl = env.FRONTEND_URL || 'http://localhost:3000';
 
+      console.log(`[Payment] Callback resolved frontendUrl: ${frontendUrl}`);
+
       const resolvedPaymentId = paymentId || tran_id || session_id;
 
       if (!resolvedPaymentId) {

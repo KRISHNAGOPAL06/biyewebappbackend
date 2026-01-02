@@ -117,7 +117,10 @@ export class PaymentService {
       totalDiscount,
     });
 
-    const baseUrl = process.env.APP_BASE_URL || 'http://localhost:5000';
+    const { env } = await import('../../config/env.js');
+    const baseUrl = env.APP_BASE_URL || 'http://localhost:5000';
+    console.log(`[Payment] Using baseUrl for gateway return: ${baseUrl}`);
+
     const gatewayRequest: GatewayPaymentRequest = {
       paymentId: payment.id,
       amount,
