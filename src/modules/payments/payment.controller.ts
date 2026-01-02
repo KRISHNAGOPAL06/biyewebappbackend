@@ -350,12 +350,14 @@ export class PaymentController {
         ...req.body,
       };
       const { paymentId, tran_id, session_id } = data;
+      const { env } = await import('../../config/env.js');
+      const frontendUrl = env.FRONTEND_URL || 'http://localhost:3000';
 
       const resolvedPaymentId = paymentId || tran_id || session_id;
 
       if (!resolvedPaymentId) {
         console.error("Callback missing ID. Body:", req.body, "Query:", req.query);
-        res.redirect(`${process.env.FRONTEND_URL}/payment/error?reason=missing_transaction_id`);
+        res.redirect(`${frontendUrl}/payment/error?reason=missing_transaction_id`);
         return;
       }
 
@@ -365,7 +367,7 @@ export class PaymentController {
           tran_id || session_id || '',
           data
         );
-        res.redirect(`${process.env.FRONTEND_URL}/payment/success`);
+        res.redirect(`${frontendUrl}/payment/success?paymentId=${resolvedPaymentId}`);
         return;
       }
 
@@ -374,17 +376,19 @@ export class PaymentController {
           resolvedPaymentId,
           data
         );
-        res.redirect(`${process.env.FRONTEND_URL}/payment/failed`);
+        res.redirect(`${frontendUrl}/payment/failed?paymentId=${resolvedPaymentId}`);
         return;
       }
 
-      res.redirect(`${process.env.FRONTEND_URL}/payment/cancelled`);
+      res.redirect(`${frontendUrl}/payment/cancelled?paymentId=${resolvedPaymentId}`);
     } catch (err: any) {
       logger.error('Payment callback error:', err);
+      const { env } = await import('../../config/env.js');
+      const frontendUrl = env.FRONTEND_URL || 'http://localhost:3000';
       // encodeURIComponent to ensure URL validity
       const errorMsg = err?.message || 'Payment processing failed';
       const msg = encodeURIComponent(errorMsg);
-      res.redirect(`${process.env.FRONTEND_URL}/payment/error?reason=${msg}`);
+      res.redirect(`${frontendUrl}/payment/error?reason=${msg}`);
     }
   }
 }

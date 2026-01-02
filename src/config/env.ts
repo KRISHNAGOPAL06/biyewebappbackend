@@ -74,6 +74,7 @@ const envSchema = z.object({
   EMAIL_PASS: z.string().optional(),
   EMAIL_FROM: z.string().default('"Biye" <noreply@biye.com>'),
   RESEND_API_KEY: z.string().optional(),
+  FRONTEND_URL: z.string().url().default('http://localhost:3000'),
 });
 
 export type Env = z.infer<typeof envSchema>;
