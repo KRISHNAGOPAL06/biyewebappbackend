@@ -178,8 +178,14 @@ export class ProfileService {
   }
 
   async getProfileById(profileId: string, requester: RequesterContext): Promise<ProfileData> {
-    const profile = await prisma.profile.findUnique({
-      where: { id: profileId },
+    const profile = await prisma.profile.findFirst({
+      where: {
+        OR: [
+          { id: profileId },
+          { userId: profileId },
+          { registeredUserId: profileId },
+        ],
+      },
       include: {
         photos: true,
         preferences: true,

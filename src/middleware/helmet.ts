@@ -4,9 +4,11 @@ export const helmetMiddleware = helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      scriptSrc: ["'self'"],
-      imgSrc: ["'self'", 'data:', 'https:', 'http:'],
+      styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://accounts.google.com'],
+      scriptSrc: ["'self'", "'unsafe-inline'", 'https://accounts.google.com'],
+      imgSrc: ["'self'", 'data:', 'https:', 'http:', 'blob:'],
+      connectSrc: ["'self'", 'https:', 'http:', 'wss:', 'ws:', 'https://accounts.google.com'],
+      frameSrc: ["'self'", 'https://accounts.google.com'],
     },
   },
   crossOriginResourcePolicy: { policy: 'cross-origin' },
