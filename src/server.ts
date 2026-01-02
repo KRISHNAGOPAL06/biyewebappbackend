@@ -19,8 +19,15 @@ const server = httpServer.listen(PORT, async () => {
   // Seed plans on startup
   try {
     await seedPlans();
+    logger.info('✅ Plans verification completed');
+
+    // Log environment configuration for debugging
+    const { env } = await import('./config/env.js');
+    logger.info(`🌐 Configuration: FRONTEND_URL=${env.FRONTEND_URL}`);
+    logger.info(`📡 Configuration: APP_BASE_URL=${env.APP_BASE_URL}`);
+
   } catch (error) {
-    logger.error('Failed to seed plans on startup:', error);
+    logger.error('❌ Startup initialization failed:', error);
   }
 });
 

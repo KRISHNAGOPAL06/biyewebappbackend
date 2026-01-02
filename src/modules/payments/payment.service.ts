@@ -119,7 +119,7 @@ export class PaymentService {
 
     const { env } = await import('../../config/env.js');
     const baseUrl = env.APP_BASE_URL || 'http://localhost:5000';
-    console.log(`[Payment] Using baseUrl for gateway return: ${baseUrl}`);
+    logger.info(`[Payment] 🚀 Generating gateway return URLs with baseUrl: ${baseUrl}`);
 
     const gatewayRequest: GatewayPaymentRequest = {
       paymentId: payment.id,
