@@ -509,6 +509,11 @@ model Vendor {
   rejectionReason  String?
   approvedAt       DateTime?
   approvedBy       String? // Admin user ID
+  
+  // Onboarding step tracking
+  onboardingStep   Int              @default(0)  // Current completed step (0 = just registered)
+  onboardingData   Json?                         // Saved form data for resume
+  
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
 

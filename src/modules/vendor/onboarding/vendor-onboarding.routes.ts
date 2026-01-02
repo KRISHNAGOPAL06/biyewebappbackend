@@ -20,7 +20,15 @@ router.get('/status', VendorOnboardingController.getStatus);
 router.patch('/profile/step', VendorOnboardingController.updateProfileStep);
 router.post('/review/submit', VendorOnboardingController.submitForReview);
 
+// Step Progress Tracking (Persistent)
+router.get('/progress', VendorOnboardingController.getProgress);
+router.put('/step/:stepNumber', VendorOnboardingController.saveStep);
+router.put('/complete', VendorOnboardingController.completeOnboarding);
+
 // Payment
 router.post('/payment/create-checkout', VendorOnboardingController.createStripeCheckout);
+
+// Coupon validation
+router.post('/coupons/validate', VendorOnboardingController.validateCoupon);
 
 export const vendorOnboardingRoutes = router;

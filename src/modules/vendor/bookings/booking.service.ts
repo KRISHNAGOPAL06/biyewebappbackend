@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+// booking.service.ts
 import { BookingCreateDTO, BookingRespondDTO, BookingCancelDTO } from '../vendor.dto.js';
 import { AppError } from '../../../utils/AppError.js';
 import { logger } from '../../../utils/logger.js';
@@ -6,7 +6,7 @@ import { logger } from '../../../utils/logger.js';
 // BookingStatus type - matches Prisma enum
 type BookingStatus = 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'COMPLETED' | 'CANCELLED';
 
-const prisma = new PrismaClient();
+import { prisma } from '../../../config/db.js';
 
 class BookingService {
     /**

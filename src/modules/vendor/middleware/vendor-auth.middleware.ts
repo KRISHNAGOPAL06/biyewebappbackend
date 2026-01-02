@@ -1,10 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { PrismaClient } from '@prisma/client';
+// (Type only, no runtime import needed)
 import { sendError } from '../../../utils/response.js';
 import { logger } from '../../../utils/logger.js';
 
-const prisma = new PrismaClient();
+import { prisma } from '../../../config/db.js';
 
 export interface VendorJWTPayload {
     vendorId: string;

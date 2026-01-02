@@ -1,4 +1,4 @@
-import { PrismaClient, PaymentMethod } from '@prisma/client';
+import { PaymentMethod } from '@prisma/client';
 import {
     InitiatePaymentDTO,
     VerifyPaymentOTPDTO,
@@ -9,7 +9,7 @@ import {
 import { AppError } from '../../../utils/AppError.js';
 import crypto from 'crypto';
 
-const prisma = new PrismaClient();
+import { prisma } from '../../../config/db.js';
 
 // OTP Configuration
 const OTP_EXPIRY_MINUTES = 10;

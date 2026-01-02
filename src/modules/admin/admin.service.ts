@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+// admin.service.ts
 import {
     DashboardStats,
     UserListItem,
@@ -9,7 +9,7 @@ import {
     PaginatedResponse
 } from './admin.types';
 
-const prisma = new PrismaClient();
+import { prisma } from '../../config/db.js';
 
 export class AdminService {
     // Dashboard Stats
@@ -387,11 +387,50 @@ export class AdminService {
     }
 
     // Plan Management
+    // Plan Management
     async getPlans() {
         try {
-            const plans = await prisma.plan.findMany({
+            // 1. Fetch current plans
+            let plans = await prisma.plan.findMany({
                 orderBy: { price: 'asc' }
             });
+
+            // 2. Check if we need to seed Vendor Plans (if none exist with category 'vendor')
+            const hasVendorPlans = plans.some(p => p.category === 'vendor');
+
+            if (!hasVendorPlans) {
+                console.log('No vendor plans found in Plan table. Syncing from VendorPlan...');
+
+                // Get legacy VendorPlans to use as template
+                const legacyPlans = await prisma.vendorPlan.findMany();
+
+                if (legacyPlans.length > 0) {
+                    for (const lp of legacyPlans) {
+                        try {
+                            // Create Plan entry
+                            await prisma.plan.create({
+                                data: {
+                                    name: lp.name,
+                                    code: lp.tier, // Map tier to code
+                                    price: Number(lp.priceYearly) > 0 ? Math.round(Number(lp.priceYearly) / 12) : 0, // Estimate monthly
+                                    durationDays: 30,
+                                    category: 'vendor',
+                                    features: [], // Frontend hardcodes this
+                                    isInviteOnly: lp.tier === 'ELITE'
+                                }
+                            });
+                        } catch (e) {
+                            console.warn(`Skipping duplicate or error for plan ${lp.name}`, e);
+                        }
+                    }
+
+                    // Re-fetch plans
+                    plans = await prisma.plan.findMany({
+                        orderBy: { price: 'asc' }
+                    });
+                }
+            }
+
             return plans;
         } catch (error) {
             console.error('Error fetching plans:', error);
@@ -463,13 +502,13 @@ export class AdminService {
             const validData: any = {};
             if (data.code !== undefined) validData.code = data.code;
             if (data.name !== undefined) validData.name = data.name;
-            if (data.price !== undefined) validData.price = data.price;
+            if (data.price !== undefined) validData.price = Math.round(data.price);
             if (data.durationDays !== undefined) validData.durationDays = data.durationDays;
             if (data.features !== undefined) validData.features = data.features;
             if (data.isInviteOnly !== undefined) validData.isInviteOnly = data.isInviteOnly;
             if (data.category !== undefined) validData.category = data.category;
             if (data.discountPercent !== undefined) validData.discountPercent = data.discountPercent;
-            if (data.discountAmount !== undefined) validData.discountAmount = data.discountAmount;
+            if (data.discountAmount !== undefined) validData.discountAmount = Math.round(data.discountAmount);
             if (data.couponCode !== undefined) validData.couponCode = data.couponCode;
             if (data.couponValidUntil !== undefined) validData.couponValidUntil = data.couponValidUntil ? new Date(data.couponValidUntil) : null;
 

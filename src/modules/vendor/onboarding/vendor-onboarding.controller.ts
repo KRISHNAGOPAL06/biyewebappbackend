@@ -3,6 +3,7 @@ import { Request, Response, NextFunction } from 'express';
 import { VendorPlanService } from '../plans/vendor-plan.service.js';
 import { VendorOnboardingService } from './vendor-onboarding.service.js';
 import { sslcommerzGateway } from '../../payments/gateways/sslcommerz.gateway.js';
+import { stripeGateway } from '../../payments/gateways/stripe.gateway.js';
 import { AppError } from '../../../utils/AppError.js';
 import { VendorPlanSelectionSchema, VendorProfileUpdateSchema } from '../vendor.dto.js';
 
@@ -95,6 +96,61 @@ export class VendorOnboardingController {
         }
     }
 
+    // --- Step Progress Tracking ---
+
+    static async getProgress(req: Request, res: Response, next: NextFunction) {
+        try {
+            const vendorId = req.vendorId!;
+            const progress = await onboardingService.getProgress(vendorId);
+
+            res.json({
+                success: true,
+                data: progress
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    static async saveStep(req: Request, res: Response, next: NextFunction) {
+        try {
+            const vendorId = req.vendorId!;
+            const stepNumber = parseInt(req.params.stepNumber, 10);
+            const stepData = req.body;
+
+            if (isNaN(stepNumber) || stepNumber < 1) {
+                throw new AppError('Invalid step number', 400, 'INVALID_STEP_NUMBER');
+            }
+
+            const result = await onboardingService.saveStep(vendorId, stepNumber, stepData);
+
+            res.json({
+                success: true,
+                message: `Step ${stepNumber} saved successfully`,
+                data: result
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    static async completeOnboarding(req: Request, res: Response, next: NextFunction) {
+        try {
+            const vendorId = req.vendorId!;
+            const result = await onboardingService.completeOnboarding(vendorId);
+
+            res.json({
+                success: true,
+                message: result.message,
+                data: {
+                    onboardingStatus: result.onboardingStatus
+                }
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+
     // --- Payment ---
 
     static async getSelectedPlan(req: Request, res: Response, next: NextFunction) {
@@ -118,26 +174,57 @@ export class VendorOnboardingController {
     static async createStripeCheckout(req: Request, res: Response, next: NextFunction) {
         try {
             const vendorId = req.vendorId!;
-            const { planId: _planId, successUrl, cancelUrl } = req.body;
+            const { planId: _planId, successUrl, cancelUrl, couponCode, paymentGateway = 'sslcommerz' } = req.body;
 
-            // Get vendor and plan details
+            // Get vendor and plan details (already has sale discount applied)
             const vendor = await planService.getVendorWithPlan(vendorId);
             if (!vendor || !vendor.plan) {
                 throw new AppError('Vendor or plan not found', 404, 'VENDOR_NOT_FOUND');
             }
 
-            // Create SSLCommerz payment session using existing gateway
-            const checkoutResult = await sslcommerzGateway.initiatePayment({
-                paymentId: `vendor_${vendorId}_${Date.now()}`,
-                amount: vendor.plan.price,
-                currency: 'BDT',
-                planName: vendor.plan.name,
-                planCode: vendor.plan.code,
-                profileId: vendorId,
-                successUrl: successUrl || `${process.env.FRONTEND_URL}/vendor/payment/success`,
-                cancelUrl: cancelUrl || `${process.env.FRONTEND_URL}/vendor/payment/cancel`,
-                failUrl: cancelUrl || `${process.env.FRONTEND_URL}/vendor/payment/cancel`
-            });
+            let finalAmount = vendor.plan.price;
+
+            // Apply coupon discount if provided
+            if (couponCode) {
+                const couponResult = await planService.validateCoupon(couponCode, vendor.planId!);
+                if (couponResult.valid && couponResult.discountPercent) {
+                    const couponDiscount = finalAmount * (couponResult.discountPercent / 100);
+                    finalAmount = Math.max(0, finalAmount - couponDiscount);
+                    console.log('[Payment] Coupon applied:', couponCode, 'Discount:', couponDiscount, 'Final:', finalAmount);
+                }
+            }
+
+            console.log('[Payment] Final payment amount:', finalAmount, 'Gateway:', paymentGateway);
+
+            let checkoutResult;
+
+            if (paymentGateway === 'stripe') {
+                // Use Stripe gateway
+                checkoutResult = await stripeGateway.initiatePayment({
+                    paymentId: `vendor_${vendorId}_${Date.now()}`,
+                    amount: finalAmount,
+                    currency: 'USD', // Stripe uses USD for international
+                    planName: vendor.plan.name,
+                    planCode: vendor.plan.code,
+                    profileId: vendorId,
+                    successUrl: successUrl || `${process.env.FRONTEND_URL}/vendor/payment/success`,
+                    cancelUrl: cancelUrl || `${process.env.FRONTEND_URL}/vendor/payment/cancel`,
+                    failUrl: cancelUrl || `${process.env.FRONTEND_URL}/vendor/payment/cancel`
+                });
+            } else {
+                // Default to SSLCommerz gateway
+                checkoutResult = await sslcommerzGateway.initiatePayment({
+                    paymentId: `vendor_${vendorId}_${Date.now()}`,
+                    amount: finalAmount,
+                    currency: 'BDT',
+                    planName: vendor.plan.name,
+                    planCode: vendor.plan.code,
+                    profileId: vendorId,
+                    successUrl: successUrl || `${process.env.FRONTEND_URL}/vendor/payment/success`,
+                    cancelUrl: cancelUrl || `${process.env.FRONTEND_URL}/vendor/payment/cancel`,
+                    failUrl: cancelUrl || `${process.env.FRONTEND_URL}/vendor/payment/cancel`
+                });
+            }
 
             if (!checkoutResult.success) {
                 throw new AppError(checkoutResult.error || 'Failed to create checkout session', 500, 'PAYMENT_ERROR');
@@ -150,6 +237,37 @@ export class VendorOnboardingController {
                     sessionId: checkoutResult.gatewayTxnId
                 }
             });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // --- Coupon Validation ---
+    static async validateCoupon(req: Request, res: Response, next: NextFunction) {
+        try {
+            const { code, planId } = req.body;
+
+            if (!code || !planId) {
+                throw new AppError('Coupon code and plan ID are required', 400, 'INVALID_REQUEST');
+            }
+
+            // Validate coupon against plan data from admin
+            const result = await planService.validateCoupon(code, planId);
+
+            if (result.valid) {
+                res.json({
+                    success: true,
+                    data: {
+                        discountPercent: result.discountPercent,
+                        code: result.code
+                    }
+                });
+            } else {
+                res.json({
+                    success: false,
+                    error: { message: result.message || 'Invalid coupon code' }
+                });
+            }
         } catch (error) {
             next(error);
         }
