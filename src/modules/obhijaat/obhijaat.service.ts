@@ -13,12 +13,15 @@ class ObhijaatService {
      * Check if a profile has an active Obhijaat subscription
      */
     async isActiveObhijaatMember(profileId: string): Promise<boolean> {
+        const plan = await prisma.plan.findUnique({ where: { code: 'OBHIJAAT' } });
+        if (!plan) return false;
+
         const subscription = await prisma.subscription.findFirst({
             where: {
                 profileId,
                 status: 'active',
                 endAt: { gte: new Date() },
-                plan: { code: 'OBHIJAAT' },
+                planId: plan.id,
             },
             include: { plan: true },
         });
@@ -30,11 +33,14 @@ class ObhijaatService {
      * Get detailed Obhijaat member information
      */
     async getMemberInfo(profileId: string): Promise<ObhijaatMemberInfo | null> {
+        const plan = await prisma.plan.findUnique({ where: { code: 'OBHIJAAT' } });
+        if (!plan) return null;
+
         const subscription = await prisma.subscription.findFirst({
             where: {
                 profileId,
                 status: 'active',
-                plan: { code: 'OBHIJAAT' },
+                planId: plan.id,
             },
             include: {
                 plan: true,
