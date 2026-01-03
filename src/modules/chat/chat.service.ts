@@ -40,10 +40,11 @@ export class ChatService {
     });
 
     if (senderProfile) {
-      // Check if user has messaging entitlement
+      // Check if user has messaging entitlement (BYPASS for icebreakers)
+      const isIcebreaker = metadata?.isIcebreaker === true;
       let thread = threadId ? await prisma.thread.findUnique({ where: { id: threadId } }) : null;
 
-      if (thread) {
+      if (thread && !isIcebreaker) {
         // Count messages in this thread from sender
         const messageCount = await prisma.message.count({
           where: { threadId, fromUserId }
@@ -205,9 +206,14 @@ export class ChatService {
     // Use effectiveUserId if provided, otherwise use second participant (initiator)
     const initiatorId = effectiveUserId || participants[1];
 
-    const canCreate = await this.canCreateThread(participants[0], initiatorId);
-    if (!canCreate) {
-      throw new Error('Users not allowed to chat. Mutual match required.');
+    // Allow thread creation WITHOUT mutual match if this is an icebreaker
+    const isIcebreaker = metadata?.type === 'icebreaker';
+
+    if (!isIcebreaker) {
+      const canCreate = await this.canCreateThread(participants[0], initiatorId);
+      if (!canCreate) {
+        throw new Error('Users not allowed to chat. Mutual match required.');
+      }
     }
 
     // Check tier-based chat limit for the CURRENT USER (the one initiating the chat)
