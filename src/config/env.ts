@@ -70,6 +70,10 @@ const envSchema = z.object({
   RESEND_API_KEY: z.string().optional(),
   FRONTEND_URL: z.string().default('http://localhost:3000'),
   APP_BASE_URL: z.string().default('http://localhost:5000'),
+
+  // Agora Configuration
+  AGORA_APP_ID: z.string().optional(),
+  AGORA_APP_CERTIFICATE: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

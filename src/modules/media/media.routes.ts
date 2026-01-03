@@ -49,6 +49,12 @@ router.get(
   mediaController.secureImage.bind(mediaController)
 );
 
+router.get(
+  '/agora/token',
+  authenticateToken,
+  mediaController.getAgoraToken.bind(mediaController)
+);
+
 router.patch(
   '/privacy/:profileId',
   authenticateToken,

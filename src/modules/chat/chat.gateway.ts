@@ -137,6 +137,52 @@ export function attachChat(io: Server): void {
       }
     });
 
+    /*--------------------------------
+        VOICE & VIDEO CALLING (Agora)
+    --------------------------------*/
+
+    // Initiate a call
+    socket.on('call_initiate', (payload: { toUserId: string; type: 'voice' | 'video'; channelName: string; callerName: string; callerImage?: string }) => {
+      const { toUserId, type, channelName, callerName, callerImage } = payload;
+      logger.info(`Call initiated: ${userId} -> ${toUserId} (${type})`);
+
+      io.to(`user:${toUserId}`).emit('call_incoming', {
+        fromUserId: userId,
+        callerName,
+        callerImage,
+        type,
+        channelName
+      });
+    });
+
+    // Accept an incoming call
+    socket.on('call_accept', (payload: { toUserId: string; channelName: string }) => {
+      const { toUserId } = payload;
+      logger.info(`Call accepted by ${userId} for ${toUserId}`);
+      io.to(`user:${toUserId}`).emit('call_accepted', {
+        fromUserId: userId
+      });
+    });
+
+    // Decline an incoming call
+    socket.on('call_decline', (payload: { toUserId: string; reason?: string }) => {
+      const { toUserId, reason } = payload;
+      logger.info(`Call declined by ${userId} for ${toUserId}. Reason: ${reason}`);
+      io.to(`user:${toUserId}`).emit('call_declined', {
+        fromUserId: userId,
+        reason: reason || 'declined'
+      });
+    });
+
+    // Hangup/End call
+    socket.on('call_hangup', (payload: { toUserId: string; channelName: string }) => {
+      const { toUserId } = payload;
+      logger.info(`Call hangup by ${userId} for ${toUserId}`);
+      io.to(`user:${toUserId}`).emit('call_ended', {
+        fromUserId: userId
+      });
+    });
+
     socket.on('disconnect', () => {
       presenceService.markOffline(userId, socket.id);
       if (!presenceService.isOnline(userId)) {

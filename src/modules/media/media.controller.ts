@@ -3,6 +3,7 @@ import { mediaService } from './media.service.js';
 import { CreateUploadUrlDTO } from './upload.dto.js';
 import { sendSuccess } from '../../utils/response.js';
 import { logger } from '../../utils/logger.js';
+import { agoraService } from './agora.service.js';
 
 export class MediaController {
   async createUploadUrl(req: Request, res: Response, next: NextFunction) {
@@ -168,6 +169,32 @@ export class MediaController {
       const stream = createReadStream(resolvedPath);
       stream.pipe(res);
 
+    } catch (error) {
+      return next(error);
+    }
+  }
+
+  async getAgoraToken(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { channelName, userId } = req.query;
+      const userUid = parseInt(userId as string);
+
+      if (!channelName || isNaN(userUid)) {
+        return res.status(400).json({
+          success: false,
+          error: { message: 'channelName (string) and userId (number) are required' }
+        });
+      }
+
+      const token = agoraService.generateRtcToken(
+        channelName as string,
+        userUid
+      );
+
+      return sendSuccess(res, {
+        token,
+        appId: agoraService.getAppId()
+      }, 'Agora token generated successfully', 200);
     } catch (error) {
       return next(error);
     }
