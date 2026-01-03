@@ -132,14 +132,16 @@ export class MediaController {
         return res.status(400).json({ success: false, error: { message: 'Path is required' } });
       }
 
-      // Basic security check: prevent directory traversal
-      if (filePath.includes('..') || !filePath.startsWith('/uploads')) {
+      // Normalize path to ensure it starts with /
+      const normalizedPath = filePath.startsWith('/') ? filePath : `/${filePath}`;
+
+      // Basic security check: prevent directory traversal and ensure it's in uploads
+      if (normalizedPath.includes('..') || !normalizedPath.startsWith('/uploads')) {
         return res.status(403).json({ success: false, error: { message: 'Invalid path' } });
       }
 
-      // Resolve full path
-      const absolutePath = import('path').then(p => p.join(process.cwd(), filePath));
-      const resolvedPath = (await import('path')).join(process.cwd(), filePath.startsWith('/') ? filePath.substring(1) : filePath);
+      // Resolve full path (remove leading slash for join with process.cwd())
+      const resolvedPath = (await import('path')).join(process.cwd(), normalizedPath.substring(1));
 
       // Verify file exists
       const { existsSync, createReadStream } = await import('fs');
