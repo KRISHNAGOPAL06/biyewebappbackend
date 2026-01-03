@@ -48,10 +48,13 @@ process.on('SIGINT', () => {
 });
 
 process.on('unhandledRejection', (reason, promise) => {
+  console.error('CRITICAL: Unhandled Rejection at:', promise, 'reason:', reason);
   logger.error('Unhandled Rejection at:', { promise, reason });
 });
 
 process.on('uncaughtException', (error) => {
+  console.error('CRITICAL: Uncaught Exception:', error.message);
+  console.error(error.stack);
   logger.error('Uncaught Exception:', { error: error.message, stack: error.stack });
   process.exit(1);
 });

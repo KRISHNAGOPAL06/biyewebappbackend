@@ -65,12 +65,12 @@ export function attachSubscriptionGateway(io: Server): void {
                 if (subscription) {
                     socket.emit('subscription:status', {
                         id: subscription.id,
-                        planCode: subscription.planCode,
-                        planName: subscription.planName,
+                        planCode: subscription.plan.code,
+                        planName: subscription.plan.name,
                         status: subscription.status,
-                        startDate: subscription.startDate,
-                        endDate: subscription.endDate,
-                        features: subscription.features,
+                        startDate: subscription.startAt,
+                        endDate: subscription.endAt,
+                        features: subscription.plan.features,
                     });
                 } else {
                     socket.emit('subscription:status', null);
