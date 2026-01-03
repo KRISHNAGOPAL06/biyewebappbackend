@@ -147,14 +147,14 @@ export class ChatService {
       logger.warn(`[Chat Debug] Could not emit message. io: ${!!this.io}, toUserId: ${toUserId}`);
     }
 
-    if (isRecipientOnline) {
+    if (isRecipientOnline && this.io) {
       this.io.to(`user:${toUserId}`).emit('delivery_receipt', {
         messageId: message.id,
         threadId: thread.id,
         delivered: true,
         deliveredAt: new Date(),
       });
-    } else {
+    } else if (!isRecipientOnline) {
       logger.info(`Recipient ${toUserId} offline, enqueue notification`);
     }
 
