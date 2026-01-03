@@ -83,6 +83,8 @@ export function createApp() {
     next();
   });
 
+  /* 
+  // Disable public access to uploads folder for security
   app.use(
     '/uploads',
     express.static(path.join(process.cwd(), 'uploads'), {
@@ -92,6 +94,7 @@ export function createApp() {
       },
     })
   );
+  */
 
   app.use(rateLimiter);
 

@@ -122,6 +122,54 @@ export class MediaController {
       return next(error);
     }
   }
+
+  async secureImage(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { path: filePath } = req.query;
+      const userId = req.userId;
+
+      if (!filePath || typeof filePath !== 'string') {
+        return res.status(400).json({ success: false, error: { message: 'Path is required' } });
+      }
+
+      // Basic security check: prevent directory traversal
+      if (filePath.includes('..') || !filePath.startsWith('/uploads')) {
+        return res.status(403).json({ success: false, error: { message: 'Invalid path' } });
+      }
+
+      // Resolve full path
+      const absolutePath = import('path').then(p => p.join(process.cwd(), filePath));
+      const resolvedPath = (await import('path')).join(process.cwd(), filePath.startsWith('/') ? filePath.substring(1) : filePath);
+
+      // Verify file exists
+      const { existsSync, createReadStream } = await import('fs');
+      if (!existsSync(resolvedPath)) {
+        return res.status(404).json({ success: false, error: { message: 'File not found' } });
+      }
+
+      // Determine content type (fallback to jpeg)
+      const ext = (await import('path')).extname(resolvedPath).toLowerCase();
+      const mimeTypes: Record<string, string> = {
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.png': 'image/png',
+        '.gif': 'image/gif',
+        '.webp': 'image/webp',
+        '.svg': 'image/svg+xml'
+      };
+
+      const contentType = mimeTypes[ext] || 'application/octet-stream';
+
+      res.setHeader('Content-Type', contentType);
+      res.setHeader('Cache-Control', 'private, max-age=3600'); // Cache for authenticated user
+
+      const stream = createReadStream(resolvedPath);
+      stream.pipe(res);
+
+    } catch (error) {
+      return next(error);
+    }
+  }
 }
 
 export const mediaController = new MediaController();

@@ -43,6 +43,12 @@ router.get(
   mediaController.listProfilePhotos.bind(mediaController)
 );
 
+router.get(
+  '/secure-image',
+  authenticateToken,
+  mediaController.secureImage.bind(mediaController)
+);
+
 router.patch(
   '/privacy/:profileId',
   authenticateToken,

@@ -102,7 +102,7 @@ export class AuthController {
 
   async refresh(req: Request, res: Response, next: NextFunction) {
     try {
-      const refreshToken = req.cookies.refreshToken;
+      const refreshToken = req.cookies.refreshToken || req.body.refreshToken;
 
       if (!refreshToken) {
         return sendError(res, 'Refresh token not found', 401, 'REFRESH_TOKEN_MISSING');
