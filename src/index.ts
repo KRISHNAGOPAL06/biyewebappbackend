@@ -103,6 +103,7 @@ export function createApp() {
   app.use(cookieParser());
 
   app.use('/api/health', healthRoute);
+  app.use('/api/v1/health', healthRoute);
   app.use('/api/v1/auth', authRoutes);
   app.use('/api/v1/profiles', profileRoutes);
   app.use('/api/v1/profiles', profilePhotosRoutes);

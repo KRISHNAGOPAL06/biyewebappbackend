@@ -12,7 +12,7 @@ const PORT = env.PORT;
 //   logger.info(`📡 Health check: http://localhost:${PORT}/api/health`);
 // });
 
-const server = httpServer.listen(PORT, async () => {
+const server = httpServer.listen(PORT, '0.0.0.0', async () => {
   logger.info(`🚀 Server running in ${env.NODE_ENV} mode on port ${PORT}`);
   logger.info(`📡 Health check: http://localhost:${PORT}/api/health`);
 

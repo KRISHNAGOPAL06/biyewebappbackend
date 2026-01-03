@@ -36,11 +36,5 @@ RUN npm ci --omit=dev && npm run prisma:generate
 # Copy built files from builder
 COPY --from=builder /app/dist ./dist
 
-# Set default environment variables
-ENV NODE_ENV=production
-ENV PORT=5000
-
-EXPOSE 5000
-
 # Start the application
 CMD ["npm", "start"]
