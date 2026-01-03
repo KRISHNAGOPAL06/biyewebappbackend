@@ -89,7 +89,7 @@ export class SearchService {
     console.log(maskedProfiles)
 
 
-    const result = createPaginationResult(visibleProfiles, dto.limit);
+    const result = createPaginationResult(enrichedWithTiers, dto.limit);
 
     // Ensure we return the same number of items as result.data
     const slicedMasked = maskedProfiles.slice(0, result.data.length);
