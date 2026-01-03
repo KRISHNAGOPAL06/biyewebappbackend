@@ -54,51 +54,31 @@ export class SearchService {
     console.log(profiles)
 
     // ----------------------------------------
-    // Tier Visibility Filtering
+    // Tier Assignment (Do NOT filter, let frontend decide on blurring/masking)
     // ----------------------------------------
     const effectiveUserId = await this.resolveCandidateUserId(userId);
-    const userProfile = await prisma.profile.findUnique({
-      where: { userId: effectiveUserId },
-    });
 
-    let visibleProfiles = profiles;
-    if (userProfile) {
-      const requesterFeatures = await entitlementService.getProfileFeatures(userProfile.id);
-      const allowedTiers = requesterFeatures?.tierVisibility ?? ['ALAAP', 'JATRA', 'AALOK', 'OBHIJAAT'];
-
-      const profilesWithTiers = await Promise.all(
-        profiles.map(async (profile) => {
-          const profileSubscription = await prisma.subscription.findFirst({
-            where: {
-              profileId: profile.id,
-              status: 'active',
-              endAt: { gte: new Date() },
-            },
-            include: { plan: true },
-            orderBy: { createdAt: 'desc' },
-          });
-          return {
-            ...profile,
-            planCode: profileSubscription?.plan?.code || 'ALAAP',
-          };
-        })
-      );
-
-      visibleProfiles = profilesWithTiers.filter((profile) => {
-        return allowedTiers.includes(profile.planCode);
-      });
-
-      logger.debug('Tier visibility filtering (search)', {
-        requesterId: userProfile.id,
-        allowedTiers,
-        totalProfiles: profiles.length,
-        visibleProfiles: visibleProfiles.length,
-      });
-    }
+    const enrichedWithTiers = await Promise.all(
+      profiles.map(async (profile) => {
+        const profileSubscription = await prisma.subscription.findFirst({
+          where: {
+            profileId: profile.id,
+            status: 'active',
+            endAt: { gte: new Date() },
+          },
+          include: { plan: true },
+          orderBy: { createdAt: 'desc' },
+        });
+        return {
+          ...profile,
+          planCode: profileSubscription?.plan?.code || 'ALAAP',
+        };
+      })
+    );
 
     const enrichedRecommendations = await this.attachInterestStatus(
       effectiveUserId,
-      visibleProfiles
+      enrichedWithTiers
     );
 
     const maskedProfiles = await Promise.all(

@@ -93,6 +93,7 @@ export interface ProfileData {
   createdAt: Date;
   updatedAt: Date;
   deletedAt?: Date;
+  planCode?: string;
 }
 
 
@@ -167,6 +168,7 @@ export interface MaskedProfile {
   // Photos
   photos?: PhotoData[];
 
+  planCode?: string;
 }
 
 
