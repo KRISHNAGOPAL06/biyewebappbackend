@@ -182,13 +182,7 @@ export class ProfileService {
       return null;
     }
 
-    const { user: userData, ...profileData } = profile as any;
-
-    return {
-      ...profileData,
-      firstName: userData?.firstName,
-      lastName: userData?.lastName,
-    } as ProfileData;
+    return profile as ProfileData;
   }
 
   async getProfileById(profileId: string, requester: RequesterContext): Promise<ProfileData> {
@@ -216,13 +210,7 @@ export class ProfileService {
       throw new Error('You do not have permission to view this profile');
     }
 
-    const { user: userData, ...profileData } = profile as any;
-
-    return {
-      ...profileData,
-      firstName: userData?.firstName,
-      lastName: userData?.lastName,
-    } as ProfileData;
+    return profile as ProfileData;
   }
 
   async updateProfileStep(

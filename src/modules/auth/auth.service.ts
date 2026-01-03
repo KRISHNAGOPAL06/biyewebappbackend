@@ -1459,13 +1459,11 @@ export class AuthService {
   private sanitizeUser(user: any): UserResponse {
     return {
       id: user.id,
-      email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      phoneNumber: user.phoneNumber,
+      // email: user.email,
+      // fullName: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
+      // phoneNumber: user.phoneNumber,
       creatingFor: user.creatingFor,
       lookingFor: user.lookingFor,
-      role: user.role,
       isVerified: user.isVerified,
       createdAt: user.createdAt,
     };

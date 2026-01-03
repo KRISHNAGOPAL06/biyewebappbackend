@@ -23,8 +23,6 @@ export interface ProfileData {
   id: string;
   userId: string;
   registeredUserId: string;
-  firstName?: string;
-  lastName?: string;
   interest?: {
     status: string;
     direction: 'sent' | 'received';

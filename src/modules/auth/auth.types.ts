@@ -12,13 +12,11 @@ export interface AuthResponse {
 
 export interface UserResponse {
   id: string;
-  email: string;
-  firstName: string | null;
-  lastName: string | null;
-  phoneNumber: string | null;
-  creatingFor: string;
-  lookingFor: string;
-  role: string;
+  // email: string;
+  // fullName: string | null;
+  // phoneNumber: string | null;
+  creatingFor: string,
+  lookingFor: string,
   isVerified: boolean;
   createdAt: Date;
 }
