@@ -125,6 +125,7 @@ const plans: PlanSeed[] = [
       signatureFeed: false,
       pauseAllowed: false,
       videoCalling: false,
+      voiceCalling: false, // Restricted to Aalok+
       tierVisibility: ['ALAAP', 'JATRA'], // Can view Alaap and Jatra profiles
     },
   },
@@ -155,6 +156,7 @@ const plans: PlanSeed[] = [
       signatureFeed: false,
       pauseAllowed: false,
       videoCalling: false,
+      voiceCalling: false, // Restricted to Aalok+
       tierVisibility: ['ALAAP', 'JATRA'], // Can view Alaap, Jatra, and request Aalok
       canRequestAalok: true,
     },
@@ -183,7 +185,8 @@ const plans: PlanSeed[] = [
       familyMessaging: true,
       signatureFeed: false,
       founderConsult: false,
-      videoCalling: false,
+      videoCalling: true,
+      voiceCalling: true,
       tierVisibility: ['ALAAP', 'JATRA', 'AALOK'], // Can view all lower tiers
       visibilityControl: true, // Can choose if visible to Jatra or all verified
     },
@@ -215,6 +218,7 @@ const plans: PlanSeed[] = [
       parentIcebreakers: 0,
       filters: ['age', 'religion', 'country', 'education', 'profession', 'lifestyle', 'migrationIntent', 'income', 'family', 'premium'],
       videoCalling: true, // In-app video calling
+      voiceCalling: true,
       signatureBadge: true, // Gold marker
       tierVisibility: ['ALAAP', 'JATRA', 'AALOK', 'OBHIJAAT'], // Can view everyone
       visibilityControl: true, // Invisible by default, approve individually

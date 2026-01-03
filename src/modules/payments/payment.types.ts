@@ -27,6 +27,7 @@ export interface PlanFeatures {
   inviteOnly?: boolean;
   // New features
   videoCalling?: boolean; // In-app video calls (Obhijaat)
+  voiceCalling?: boolean; // In-app voice calls (Alaap+)
   signatureBadge?: boolean; // Gold marker (Obhijaat)
   tierVisibility?: string[]; // Which plan tiers can be viewed
   visibilityControl?: boolean; // Can control profile visibility
@@ -74,6 +75,7 @@ export type EntitlementAction =
   | 'attend_founder_events'
   // New actions
   | 'use_video_call'        // In-app video calling (Obhijaat)
+  | 'use_voice_call'        // In-app voice calling (Alaap+)
   | 'control_visibility'    // Control profile visibility (Aalok+)
   | 'request_aalok_profile' // Request to view Aalok profile (Jatra)
   | 'view_tier';            // View profiles of specific tier

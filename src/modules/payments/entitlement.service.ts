@@ -105,6 +105,8 @@ export class EntitlementService {
         return features.founderConsult === true;
       case 'use_video_call':
         return features.videoCalling === true;
+      case 'use_voice_call':
+        return features.voiceCalling === true;
       case 'control_visibility':
         return features.visibilityControl === true;
       case 'request_aalok_profile':
