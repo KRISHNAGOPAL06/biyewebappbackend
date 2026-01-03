@@ -48,23 +48,29 @@ export function createApp() {
 
   // Initialize Socket.IO
   const io = new SocketIOServer(httpServer, {
+    transports: ['websocket'], // Enforce websocket only as requested
     cors: {
       origin: (origin, callback) => {
         if (!origin) return callback(null, true);
 
         const normalizedOrigin = origin.replace(/\/+$/, '').toLowerCase();
-        const allowedOrigins = (process.env.ALLOWED_ORIGINS?.split(',') || []).map(o => o.trim().replace(/\/+$/, '').toLowerCase());
-        const devOrigins = ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000'];
+        // Trust any Railway domain and localhost for dev
+        const isRailway = normalizedOrigin.endsWith('.railway.app');
+        const isLocal = normalizedOrigin.startsWith('http://localhost') ||
+          normalizedOrigin.startsWith('http://127.0.0.1');
 
-        const isAllowed = devOrigins.includes(normalizedOrigin) ||
-          normalizedOrigin.endsWith('.railway.app') ||
-          allowedOrigins.some((o) => {
-            if (o.endsWith('/*')) {
-              const base = o.slice(0, -2);
-              return normalizedOrigin.startsWith(base);
-            }
-            return o === normalizedOrigin;
-          });
+        if (isRailway || isLocal) {
+          return callback(null, true);
+        }
+
+        const allowedOrigins = (process.env.ALLOWED_ORIGINS?.split(',') || []).map(o => o.trim().replace(/\/+$/, '').toLowerCase());
+        const isAllowed = allowedOrigins.some((o) => {
+          if (o.endsWith('/*')) {
+            const base = o.slice(0, -2);
+            return normalizedOrigin.startsWith(base);
+          }
+          return o === normalizedOrigin;
+        });
 
         if (isAllowed) {
           callback(null, true);
@@ -74,7 +80,10 @@ export function createApp() {
         }
       },
       credentials: true,
+      methods: ["GET", "POST"]
     },
+    pingTimeout: 60000, // Increase timeouts for stability
+    pingInterval: 25000,
   });
 
   // Attach gateways
