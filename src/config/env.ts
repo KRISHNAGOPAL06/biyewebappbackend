@@ -15,13 +15,7 @@ const envSchema = z.object({
   JWT_ACCESS_EXPIRY: z.string().default('15d'),
   JWT_REFRESH_EXPIRY: z.string().default('100d'),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
-  PORT: z
-    .string()
-    .default('3000')
-    .transform(Number)
-    .refine((val) => !Number.isNaN(val), {
-      message: 'PORT must be a valid number',
-    }),
+  PORT: z.coerce.number().default(5000),
   LOG_LEVEL: z.enum(['error', 'warn', 'info', 'http', 'verbose', 'debug', 'silly']).default('info'),
   ALLOWED_ORIGINS: z.string().transform((val) => val.split(',').map((origin) => origin.trim())),
 
