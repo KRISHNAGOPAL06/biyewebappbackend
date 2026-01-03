@@ -136,35 +136,47 @@ export class ChatService {
     };
 
     if (this.io && toUserId) {
-      this.io.to(`user:${toUserId}`).emit('message', messageResponse);
-
-      if (isRecipientOnline) {
-        this.io.to(`user:${toUserId}`).emit('delivery_receipt', {
-          messageId: message.id,
-          threadId: thread.id,
-          delivered: true,
-          deliveredAt: new Date(),
-        });
-      } else {
-        logger.info(`Recipient ${toUserId} offline, enqueue notification`);
-      }
+      const room = `user:${toUserId}`;
+      const isRoomOccupied = this.io.sockets.adapter.rooms.has(room);
+      logger.info(`[Chat Debug] Emitting message to room ${room}. Occupied: ${isRoomOccupied}`, {
+        threadId: messageResponse.threadId,
+        messageId: messageResponse.id
+      });
+      this.io.to(room).emit('message', messageResponse);
+    } else {
+      logger.warn(`[Chat Debug] Could not emit message. io: ${!!this.io}, toUserId: ${toUserId}`);
     }
 
-    let user = await prisma.user.findUnique({ where: { id: fromUserId }, include: { profile: true } });
-    // Emit notification
-    console.log("🔥 EVENT EMITTED", {
-      userId: toUserId,
-      type: "new_message"
-    });
-    eventBus.emitNotification({
-      userId: toUserId,
-      type: "new_message",
-      metadata: {
-        fromName: user?.profile?.registeredUserId,
-        threadId: threadId
-      },
-      priority: "HIGH"
-    });
+    if (isRecipientOnline) {
+      this.io.to(`user:${toUserId}`).emit('delivery_receipt', {
+        messageId: message.id,
+        threadId: thread.id,
+        delivered: true,
+        deliveredAt: new Date(),
+      });
+    } else {
+      logger.info(`Recipient ${toUserId} offline, enqueue notification`);
+    }
+
+    try {
+      let user = await prisma.user.findUnique({ where: { id: fromUserId }, include: { profile: true } });
+      // Emit notification
+      console.log("🔥 EVENT EMITTED", {
+        userId: toUserId,
+        type: "new_message"
+      });
+      eventBus.emitNotification({
+        userId: toUserId!,
+        type: "new_message",
+        metadata: {
+          fromName: user?.profile?.registeredUserId,
+          threadId: thread.id
+        },
+        priority: "HIGH"
+      });
+    } catch (notifyError) {
+      logger.error('Failed to emit notification:', notifyError);
+    }
 
     return messageResponse;
   }
@@ -229,32 +241,39 @@ export class ChatService {
     });
 
     if (initiatorProfile) {
-      const canStartChat = await entitlementService.can(initiatorProfile.id, 'start_chat');
-      logger.info('[Chat] Entitlement check result', {
-        profileId: initiatorProfile.id,
-        canStartChat,
-        action: 'start_chat'
-      });
+      // Bypassing these checks for icebreakers because limits are handled in the controller via IcebreakerService
+      const isIcebreaker = metadata?.type === 'icebreaker';
 
-      if (!canStartChat) {
-        const features = await entitlementService.getProfileFeatures(initiatorProfile.id);
-        logger.warn('[Chat] Chat BLOCKED - checking features', {
+      if (!isIcebreaker) {
+        const canStartChat = await entitlementService.can(initiatorProfile.id, 'start_chat');
+        logger.info('[Chat] Entitlement check result', {
           profileId: initiatorProfile.id,
-          features: features ? JSON.stringify(features) : 'null'
+          canStartChat,
+          action: 'start_chat'
         });
 
-        const messaging = features?.messaging;
-        if (messaging && typeof messaging === 'object' && 'newChatsPerMonth' in messaging) {
-          throw new Error(`CHAT_LIMIT_EXCEEDED: You have reached the ${messaging.newChatsPerMonth} new chats per month limit. Please upgrade to start more conversations.`);
-        }
-        throw new Error('CHAT_NOT_ALLOWED: Your plan does not include messaging. Please upgrade.');
-      }
+        if (!canStartChat) {
+          const features = await entitlementService.getProfileFeatures(initiatorProfile.id);
+          logger.warn('[Chat] Chat BLOCKED - checking features', {
+            profileId: initiatorProfile.id,
+            features: features ? JSON.stringify(features) : 'null'
+          });
 
-      // Increment usage counter for successful chat creation
-      await entitlementService.incrementUsage(initiatorProfile.id, 'start_chat');
-      logger.info('[Chat] Chat creation successful, usage incremented', { profileId: initiatorProfile.id });
+          const messaging = features?.messaging;
+          if (messaging && typeof messaging === 'object' && 'newChatsPerMonth' in messaging) {
+            throw new Error(`CHAT_LIMIT_EXCEEDED: You have reached the ${messaging.newChatsPerMonth} new chats per month limit. Please upgrade to start more conversations.`);
+          }
+          throw new Error('CHAT_NOT_ALLOWED: Your plan does not include messaging. Please upgrade.');
+        }
+
+        // Increment usage counter for successful chat creation
+        await entitlementService.incrementUsage(initiatorProfile.id, 'start_chat');
+        logger.info('[Chat] Chat creation successful, usage incremented', { profileId: initiatorProfile.id });
+      } else {
+        logger.info('[Chat] Icebreaker detected, bypassing start_chat entitlement checks', { profileId: initiatorProfile.id });
+      }
     } else {
-      logger.warn('[Chat] No profile found for initiator, proceeding without entitlement check', { userId: effectiveUserId });
+      logger.warn('[Chat] No profile found for initiator, proceeding without entitlement check', { userId: initiatorId });
     }
 
     const thread = await this.findOrCreateThread(participants);
