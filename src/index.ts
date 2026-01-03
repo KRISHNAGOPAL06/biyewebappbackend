@@ -50,14 +50,24 @@ export function createApp() {
   const io = new SocketIOServer(httpServer, {
     cors: {
       origin: (origin, callback) => {
-        const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',').map(o => o.trim()) || ['http://localhost:3000'];
+        if (!origin) return callback(null, true);
 
-        // Always allow if no origin (e.g., server-to-server) or in dev common ports
-        if (!origin ||
-          allowedOrigins.includes(origin) ||
-          ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000'].includes(origin)) {
+        const normalizedOrigin = origin.replace(/\/+$/, '').toLowerCase();
+        const allowedOrigins = (process.env.ALLOWED_ORIGINS?.split(',') || []).map(o => o.trim().replace(/\/+$/, '').toLowerCase());
+        const devOrigins = ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000'];
+
+        const isAllowed = devOrigins.includes(normalizedOrigin) || allowedOrigins.some((o) => {
+          if (o.endsWith('/*')) {
+            const base = o.slice(0, -2);
+            return normalizedOrigin.startsWith(base);
+          }
+          return o === normalizedOrigin;
+        });
+
+        if (isAllowed) {
           callback(null, true);
         } else {
+          logger.warn(`[Socket CORS] Denied: ${origin}`);
           callback(new Error('Not allowed by CORS'));
         }
       },
