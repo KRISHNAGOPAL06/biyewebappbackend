@@ -73,18 +73,6 @@ export function createApp() {
 
   app.use(helmetMiddleware);
   app.use(corsMiddleware);
-  app.use('/uploads', (req, _res, next) => {
-    const filePath = path.join(process.cwd(), 'uploads', req.path);
-    import('fs').then((fs) => {
-      if (!fs.existsSync(filePath)) {
-        logger.warn(`[Static] File not found: ${filePath}`);
-      }
-    });
-    next();
-  });
-
-  /* 
-  // Disable public access to uploads folder for security
   app.use(
     '/uploads',
     express.static(path.join(process.cwd(), 'uploads'), {
@@ -94,7 +82,6 @@ export function createApp() {
       },
     })
   );
-  */
 
   app.use(rateLimiter);
 
