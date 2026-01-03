@@ -56,13 +56,15 @@ export function createApp() {
         const allowedOrigins = (process.env.ALLOWED_ORIGINS?.split(',') || []).map(o => o.trim().replace(/\/+$/, '').toLowerCase());
         const devOrigins = ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000'];
 
-        const isAllowed = devOrigins.includes(normalizedOrigin) || allowedOrigins.some((o) => {
-          if (o.endsWith('/*')) {
-            const base = o.slice(0, -2);
-            return normalizedOrigin.startsWith(base);
-          }
-          return o === normalizedOrigin;
-        });
+        const isAllowed = devOrigins.includes(normalizedOrigin) ||
+          normalizedOrigin.endsWith('.railway.app') ||
+          allowedOrigins.some((o) => {
+            if (o.endsWith('/*')) {
+              const base = o.slice(0, -2);
+              return normalizedOrigin.startsWith(base);
+            }
+            return o === normalizedOrigin;
+          });
 
         if (isAllowed) {
           callback(null, true);
