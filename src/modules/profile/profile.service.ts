@@ -132,6 +132,14 @@ export class ProfileService {
       // Self / candidate own their profile directly
       profile = await prisma.profile.findUnique({
         where: { userId: userId },
+        include: {
+          user: {
+            select: {
+              firstName: true,
+              lastName: true,
+            }
+          }
+        }
       });
     } else if (user.role === 'parent') {
       // Parent: find a profile via CandidateLink where this user is parent
@@ -183,6 +191,12 @@ export class ProfileService {
       include: {
         photos: true,
         preferences: true,
+        user: {
+          select: {
+            firstName: true,
+            lastName: true,
+          }
+        }
       },
     });
 
