@@ -235,15 +235,22 @@ export class RecommendationService {
       })
     );
 
-    logger.debug('Tier assignment (recommendations)', {
+    // Filter to only show profiles whose tier the requester is allowed to view
+    const visibleProfiles = profilesWithTiers.filter((profile) => {
+      return allowedTiers.includes(profile.planCode);
+    });
+
+    logger.debug('Tier visibility filtering', {
       requesterId: userProfile.id,
+      allowedTiers,
       totalProfiles: profiles.length,
+      visibleProfiles: visibleProfiles.length,
     });
 
     // ----------------------------------------
     // 6️⃣ Ranking: Weighted + ML Score
     // ----------------------------------------
-    const ranked = await this.applyAdvancedRanking(userProfile, profilesWithTiers);
+    const ranked = await this.applyAdvancedRanking(userProfile, visibleProfiles);
     console.log(ranked);
 
     const enrichedRecommendations = await this.attachInterestStatus(
@@ -347,16 +354,20 @@ export class RecommendationService {
       })
     );
 
-    logger.info('New profiles fetched (with plan codes)', {
+    const visibleProfiles = profilesWithTiers.filter((profile) => {
+      return allowedTiers.includes(profile.planCode);
+    });
+
+    logger.info('New profiles fetched', {
       userId,
       effectiveUserId,
-      count: profilesWithTiers.length,
+      count: visibleProfiles.length,
       date: startOfToday.toISOString(),
     });
 
     const enrichedProfiles = await this.attachInterestStatus(
       effectiveUserId,
-      profilesWithTiers
+      visibleProfiles
     );
 
     console.log(enrichedProfiles)
@@ -459,16 +470,20 @@ export class RecommendationService {
       })
     );
 
-    logger.info('Nearby profiles fetched (with plan codes)', {
+    const visibleNearbyProfiles = profilesWithTiers.filter((profile) => {
+      return allowedTiers.includes(profile.planCode);
+    });
+
+    logger.info('Nearby profiles fetched (stub - city match only)', {
       userId,
       effectiveUserId,
       userCity,
-      count: profilesWithTiers.length,
+      count: visibleNearbyProfiles.length,
     });
 
     const enrichedNearbyProfiles = await this.attachInterestStatus(
       effectiveUserId,
-      profilesWithTiers
+      visibleNearbyProfiles
     );
 
     console.log(enrichedNearbyProfiles);

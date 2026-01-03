@@ -23,6 +23,8 @@ export interface ProfileData {
   id: string;
   userId: string;
   registeredUserId: string;
+  firstName?: string;
+  lastName?: string;
   interest?: {
     status: string;
     direction: 'sent' | 'received';
@@ -93,7 +95,6 @@ export interface ProfileData {
   createdAt: Date;
   updatedAt: Date;
   deletedAt?: Date;
-  planCode?: string;
 }
 
 
@@ -168,7 +169,6 @@ export interface MaskedProfile {
   // Photos
   photos?: PhotoData[];
 
-  planCode?: string;
 }
 
 
