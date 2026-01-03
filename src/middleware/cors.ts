@@ -12,8 +12,13 @@ export const corsMiddleware = cors({
     const allowedOrigins = (env.ALLOWED_ORIGINS ?? []).map((o) => o.replace(/\/+$/, '').toLowerCase());
     const normalizedOrigin = origin.replace(/\/+$/, '').toLowerCase();
 
-    // Generic Dev Fallback: Allow common frontend ports strictly
-    if (normalizedOrigin === 'http://localhost:5173' || normalizedOrigin === 'http://localhost:3000' || normalizedOrigin === 'http://localhost:5174') {
+    // Generic Dev Fallback: Allow common frontend ports and local IPs
+    if (
+      normalizedOrigin.startsWith('http://localhost:') ||
+      normalizedOrigin.startsWith('http://127.0.0.1:') ||
+      normalizedOrigin.startsWith('http://192.168.') ||
+      normalizedOrigin.startsWith('http://10.0.2.2:')
+    ) {
       logger.info(`[CORS] Allowed dev origin: ${origin}`);
       return callback(null, true);
     }

@@ -57,7 +57,9 @@ export function createApp() {
         // Trust any Railway domain and localhost for dev
         const isRailway = normalizedOrigin.endsWith('.railway.app');
         const isLocal = normalizedOrigin.startsWith('http://localhost') ||
-          normalizedOrigin.startsWith('http://127.0.0.1');
+          normalizedOrigin.startsWith('http://127.0.0.1') ||
+          normalizedOrigin.startsWith('http://192.168.') ||
+          normalizedOrigin.startsWith('http://10.0.2.2'); // Android Emulator
 
         if (isRailway || isLocal) {
           return callback(null, true);
