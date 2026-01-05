@@ -12,6 +12,7 @@ class VendorAuthController {
             const result = await vendorAuthService.register(req.body);
             return sendSuccess(res, result, result.message, 201);
         } catch (error) {
+            console.error('VENDOR REGISTER ERROR:', error);
             next(error);
         }
     }
