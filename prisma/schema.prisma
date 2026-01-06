@@ -183,7 +183,7 @@ model Photo {
   url              String?
   fileSize         Int?
   mimeType         String?
-  privacyLevel     String    @default("public")
+  privacyLevel     String    @default("connections") // public | connections | request
   moderationStatus String    @default("pending")
   moderationNote   String?
   createdAt        DateTime  @default(now())
@@ -850,4 +850,19 @@ model Report {
   @@index([reportedProfileId])
   @@index([status])
   @@map("reports")
+}
+
+// ============== USER BLOCKING ==============
+
+model BlockedUser {
+  id            String   @id @default(uuid())
+  blockerUserId String   // User who blocked
+  blockedUserId String   // User who was blocked
+  reason        String?  // Optional reason for blocking
+  createdAt     DateTime @default(now())
+
+  @@unique([blockerUserId, blockedUserId])
+  @@index([blockerUserId])
+  @@index([blockedUserId])
+  @@map("blocked_users")
 }
