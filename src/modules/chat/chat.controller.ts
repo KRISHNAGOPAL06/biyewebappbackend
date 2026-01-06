@@ -204,6 +204,29 @@ export class ChatController {
     }
   }
 
+  async getUnreadCount(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = req.userId;
+
+      if (!userId) {
+        sendError(res, 'Unauthorized', 401);
+        return;
+      }
+
+      logger.info('Get unread count request', {
+        userId,
+        requestId: req.requestId,
+      });
+
+      const count = await chatService.getUnreadCount(userId);
+
+      sendSuccess(res, { count }, 'Unread count retrieved successfully');
+    } catch (error: any) {
+      logger.error('Error fetching unread count:', error);
+      sendError(res, error.message || 'Failed to fetch unread count', 500);
+    }
+  }
+
   /**
    * Same role logic as elsewhere:
    * - self/candidate → act as themselves

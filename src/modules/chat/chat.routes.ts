@@ -8,6 +8,7 @@ const router = Router();
 
 // Thread routes
 router.get('/threads', authenticateToken, chatController.getThreads.bind(chatController));
+router.get('/threads/unread-count', authenticateToken, chatController.getUnreadCount.bind(chatController));
 router.get('/threads/:threadId', authenticateToken, chatController.getThread.bind(chatController));
 router.post('/threads', authenticateToken, validate(createThreadSchema), chatController.createThread.bind(chatController));
 router.get('/threads/:threadId/messages', authenticateToken, chatController.getMessages.bind(chatController));

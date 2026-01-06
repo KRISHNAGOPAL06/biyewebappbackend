@@ -545,6 +545,17 @@ export class ChatService {
     logger.info(`Marked ${updatedMessages.count} messages as read in thread ${threadId} for user ${userId}`);
   }
 
+  async getUnreadCount(userId: string): Promise<number> {
+    const count = await prisma.message.count({
+      where: {
+        toUserId: userId,
+        read: false,
+      },
+    });
+
+    return count;
+  }
+
   async canCreateThread(userA: string, userB: string): Promise<boolean> {
     const mutualMatch = await prisma.interest.findFirst({
       where: {
