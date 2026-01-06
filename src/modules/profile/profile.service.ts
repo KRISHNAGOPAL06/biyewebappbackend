@@ -9,6 +9,7 @@ import { logger } from '../../utils/logger.js';
 import { generateRegisteredUserId } from '../../utils/profileId.generator.js';
 
 import { prisma } from '../../prisma.js';
+import { eventBus } from '../../events/eventBus.js';
 
 export class ProfileService {
   private async assertUserCanActOnProfile(
@@ -208,6 +209,37 @@ export class ProfileService {
 
     if (!canView) {
       throw new Error('You do not have permission to view this profile');
+    }
+
+    // 🔥 Emit notification if viewer is different from owner
+    if (profile.userId !== requester.userId) {
+      // Debounce check could go here, but omitted for simplicity
+      // We need viewer's name for the notification
+      // requester doesn't carry name, so we just use "A user" or fetch it?
+      // Let's try to fetch viewer profile name
+
+      // Async fire-and-forget
+      (async () => {
+        try {
+          const viewer = await prisma.profile.findUnique({
+            where: { userId: requester.userId },
+            select: { registeredUserId: true }
+          });
+
+          eventBus.emitNotification({
+            userId: profile.userId,
+            type: 'profile_view',
+            metadata: {
+              viewerName: viewer?.registeredUserId || 'A user',
+              viewerUserId: requester.userId,
+              profileId: profileId
+            },
+            priority: 'LOW'
+          });
+        } catch (e) {
+          logger.error('Failed to emit profile_view notification', e);
+        }
+      })();
     }
 
     return profile as ProfileData;

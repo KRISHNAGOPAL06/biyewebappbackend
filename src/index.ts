@@ -32,6 +32,7 @@ import adminRoutes from './modules/admin/admin.routes.js';
 import obhijaatRoutes from './modules/obhijaat/obhijaat.routes.js';
 import blockRoutes from './modules/block/block.routes.js';
 import privacyRoutes from './modules/privacy/privacy.routes.js';
+import favoritesRoutes from './modules/favorites/favorites.routes.js';
 
 export function createApp() {
   const app = express();
@@ -147,6 +148,9 @@ export function createApp() {
   app.use('/api/v1/reports', reportRoutes);
   app.use('/api/v1/blocks', blockRoutes);
   app.use('/api/v1/privacy', privacyRoutes);
+
+  // Register Favorites Routes
+  app.use('/api/v1/favorites', favoritesRoutes);
 
   app.use((_req: Request, res: Response) => {
     res.status(404).json({
