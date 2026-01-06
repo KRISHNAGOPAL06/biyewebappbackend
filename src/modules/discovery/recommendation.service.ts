@@ -391,9 +391,11 @@ export class RecommendationService {
       return [];
     }
 
-    const userCity = (userProfile.location as any)?.city;
+    // Location structure: { country, state } (city removed)
+    const userState = (userProfile.location as any)?.state;
 
-    if (!userCity) {
+    if (!userState) {
+      logger.warn('User state not found for nearby search', { userId, effectiveUserId });
       return [];
     }
 
@@ -442,8 +444,8 @@ export class RecommendationService {
     });
 
     const nearbyProfiles = profiles.filter((profile: any) => {
-      const profileCity = (profile.location as any)?.city;
-      return profileCity === userCity;
+      const profileState = (profile.location as any)?.state;
+      return profileState === userState;
     });
 
     // ----------------------------------------
@@ -474,10 +476,10 @@ export class RecommendationService {
       return allowedTiers.includes(profile.planCode);
     });
 
-    logger.info('Nearby profiles fetched (stub - city match only)', {
+    logger.info('Nearby profiles fetched (state match)', {
       userId,
       effectiveUserId,
-      userCity,
+      userState,
       count: visibleNearbyProfiles.length,
     });
 
