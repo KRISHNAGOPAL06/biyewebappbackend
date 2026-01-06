@@ -1,5 +1,5 @@
-[2026-01-06T17:27:05.942Z] Checking view: owner=060cdde7-5b49-4b32-ab2a-0a2e9ac29410, requester=df74d2ca-e010-4eb0-9d72-feb8f615c0f4
-[2026-01-06T17:27:05.943Z] Condition met. Emitting...
-[2026-01-06T17:27:06.862Z] Viewer found: TBCo_710512913
-[2026-01-06T17:27:06.862Z] Emitting event: {"userId":"060cdde7-5b49-4b32-ab2a-0a2e9ac29410","type":"profile_view","metadata":{"viewerName":"TBCo_710512913","viewerUserId":"df74d2ca-e010-4eb0-9d72-feb8f615c0f4","profileId":"30b65c58-cd66-40e0-b74b-613c30860f31"},"priority":"LOW"}
-[2026-01-06T17:27:06.865Z] Emitted.
+[2026-01-06T17:34:41.645Z] Checking view: owner=060cdde7-5b49-4b32-ab2a-0a2e9ac29410, requester=df74d2ca-e010-4eb0-9d72-feb8f615c0f4
+[2026-01-06T17:34:41.646Z] Condition met. Emitting...
+[2026-01-06T17:34:43.378Z] Viewer found: TBCo_710512913
+[2026-01-06T17:34:43.518Z] Saving notification directly...
+[2026-01-06T17:34:43.799Z] Notification saved successfully.

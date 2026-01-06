@@ -212,11 +212,8 @@ export class ProfileService {
       throw new Error('You do not have permission to view this profile');
     }
 
-    // 🔥 Emit notification if viewer is different from owner
-    try { fs.appendFileSync('debug_log.txt', `[${new Date().toISOString()}] Checking view: owner=${profile.userId}, requester=${requester.userId}\n`); } catch (e) { }
-
+    // 🔥 Create notification if viewer is different from owner
     if (profile.userId !== requester.userId) {
-      try { fs.appendFileSync('debug_log.txt', `[${new Date().toISOString()}] Condition met. Emitting...\n`); } catch (e) { }
 
       // Async fire-and-forget
       (async () => {
@@ -226,31 +223,38 @@ export class ProfileService {
             select: { registeredUserId: true }
           });
 
-          try { fs.appendFileSync('debug_log.txt', `[${new Date().toISOString()}] Viewer found: ${viewer?.registeredUserId}\n`); } catch (e) { }
+          // Import notification service and template
+          const { notificationService } = await import('../notifications/notification.service.js');
+          const { getTemplate } = await import('../notifications/notification.templates.js');
 
-          const event = {
+          const template = getTemplate('profile_view', {
+            viewerName: viewer?.registeredUserId || 'A user',
+            viewerUserId: requester.userId,
+            profileId: profileId
+          });
+
+          try { fs.appendFileSync('debug_log.txt', `[${new Date().toISOString()}] Saving notification directly...\n`); } catch (e) { }
+
+          // Save directly to database (bypassing dispatcher for reliability)
+          await notificationService.createInAppNotification({
             userId: profile.userId,
             type: 'profile_view',
+            title: template.title,
+            body: template.body,
             metadata: {
               viewerName: viewer?.registeredUserId || 'A user',
               viewerUserId: requester.userId,
               profileId: profileId
             },
             priority: 'LOW'
-          };
+          });
 
-          try { fs.appendFileSync('debug_log.txt', `[${new Date().toISOString()}] Emitting event: ${JSON.stringify(event)}\n`); } catch (e) { }
-
-          eventBus.emitNotification(event);
-
-          try { fs.appendFileSync('debug_log.txt', `[${new Date().toISOString()}] Emitted.\n`); } catch (e) { }
+          try { fs.appendFileSync('debug_log.txt', `[${new Date().toISOString()}] Notification saved successfully.\n`); } catch (e) { }
         } catch (e) {
           try { fs.appendFileSync('debug_log.txt', `[${new Date().toISOString()}] ERROR: ${e}\n`); } catch (err) { }
-          logger.error('Failed to emit profile_view notification', e);
+          logger.error('Failed to create profile_view notification', e);
         }
       })();
-    } else {
-      try { fs.appendFileSync('debug_log.txt', `[${new Date().toISOString()}] Self view.\n`); } catch (e) { }
     }
 
     return profile as ProfileData;
