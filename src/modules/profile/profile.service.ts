@@ -3,6 +3,7 @@ import {
   CreateProfileDTO,
   StepUpdateDTO,
 } from './profile.dto.js';
+import * as fs from 'fs';
 import { completenessService } from './completeness.service.js';
 import { profilePermissions } from './profile.permissions.js';
 import { logger } from '../../utils/logger.js';
@@ -212,11 +213,10 @@ export class ProfileService {
     }
 
     // 🔥 Emit notification if viewer is different from owner
+    try { fs.appendFileSync('debug_log.txt', `[${new Date().toISOString()}] Checking view: owner=${profile.userId}, requester=${requester.userId}\n`); } catch (e) { }
+
     if (profile.userId !== requester.userId) {
-      // Debounce check could go here, but omitted for simplicity
-      // We need viewer's name for the notification
-      // requester doesn't carry name, so we just use "A user" or fetch it?
-      // Let's try to fetch viewer profile name
+      try { fs.appendFileSync('debug_log.txt', `[${new Date().toISOString()}] Condition met. Emitting...\n`); } catch (e) { }
 
       // Async fire-and-forget
       (async () => {
@@ -226,7 +226,9 @@ export class ProfileService {
             select: { registeredUserId: true }
           });
 
-          eventBus.emitNotification({
+          try { fs.appendFileSync('debug_log.txt', `[${new Date().toISOString()}] Viewer found: ${viewer?.registeredUserId}\n`); } catch (e) { }
+
+          const event = {
             userId: profile.userId,
             type: 'profile_view',
             metadata: {
@@ -235,11 +237,20 @@ export class ProfileService {
               profileId: profileId
             },
             priority: 'LOW'
-          });
+          };
+
+          try { fs.appendFileSync('debug_log.txt', `[${new Date().toISOString()}] Emitting event: ${JSON.stringify(event)}\n`); } catch (e) { }
+
+          eventBus.emitNotification(event);
+
+          try { fs.appendFileSync('debug_log.txt', `[${new Date().toISOString()}] Emitted.\n`); } catch (e) { }
         } catch (e) {
+          try { fs.appendFileSync('debug_log.txt', `[${new Date().toISOString()}] ERROR: ${e}\n`); } catch (err) { }
           logger.error('Failed to emit profile_view notification', e);
         }
       })();
+    } else {
+      try { fs.appendFileSync('debug_log.txt', `[${new Date().toISOString()}] Self view.\n`); } catch (e) { }
     }
 
     return profile as ProfileData;

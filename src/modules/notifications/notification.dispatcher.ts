@@ -115,39 +115,58 @@ class NotificationDispatcher {
     const priority = (event.priority || 'LOW') as NotificationPriority;
     const config = PRIORITY_CONFIG[priority];
 
+    console.log(`📋 Priority: ${priority}, Config:`, config);
+
     try {
+      console.log(`🔍 Fetching preferences for user: ${event.userId}`);
       const preferences = await notificationPreferenceService.getPreferences(
         event.userId
       );
 
+      console.log(`⚙️ User preferences:`, preferences);
+
       const template = getTemplate(event.type, event.metadata || {});
+      console.log(`📝 Template generated:`, { title: template.title, body: template.body });
 
       if (config.deliveryMethods.includes('in_app') && preferences.inAppEnabled) {
-        await notificationService.createInAppNotification({
-          userId: event.userId,
-          type: event.type as NotificationType,
-          title: template.title,
-          body: template.body,
-          metadata: event.metadata,
-          priority,
-        });
+        console.log(`💾 Attempting in-app notification save...`);
+        try {
+          await notificationService.createInAppNotification({
+            userId: event.userId,
+            type: event.type as NotificationType,
+            title: template.title,
+            body: template.body,
+            metadata: event.metadata,
+            priority,
+          });
+          console.log(`✅ In-app notification saved successfully`);
+        } catch (saveError) {
+          console.error(`❌ In-app save failed:`, saveError);
+          throw saveError;
+        }
+      } else {
+        console.log(`⏭️ Skipping in-app: deliveryMethods=${config.deliveryMethods}, inAppEnabled=${preferences.inAppEnabled}`);
       }
 
       if (config.deliveryMethods.includes('email') && preferences.emailEnabled) {
+        console.log(`📧 Attempting email notification...`);
         await notificationService.sendEmailNotification(
           event.userId,
           template.emailSubject || template.title,
           template.emailBody || template.body
         );
+        console.log(`✅ Email sent successfully`);
       }
 
       if (config.deliveryMethods.includes('push') && preferences.pushEnabled) {
+        console.log(`📱 Attempting push notification...`);
         await notificationService.sendPushNotification(
           event.userId,
           template.title,
           template.body,
           event.metadata
         );
+        console.log(`✅ Push sent successfully`);
       }
 
       logger.info('Notification delivered successfully', {
@@ -164,6 +183,8 @@ class NotificationDispatcher {
     } catch (error) {
       notification.attempts++;
       const shouldRetry = notification.attempts < config.retryAttempts;
+
+      console.error(`❌ Notification delivery failed (attempt ${notification.attempts}/${config.retryAttempts}):`, error);
 
       logger.error('Notification delivery failed', {
         userId: event.userId,
