@@ -334,21 +334,24 @@ export class ChatService {
       let blockedBy = undefined;
 
       if (otherParticipant) {
-        // We need to know who blocked whom
-        // isBlocked() returns boolean if ANY block exists
-        // Let's get the specific block record
-        const blockRecord = await prisma.blockedUser.findFirst({
-          where: {
-            OR: [
-              { blockerUserId: userId, blockedUserId: otherParticipant },
-              { blockerUserId: otherParticipant, blockedUserId: userId },
-            ]
-          }
-        });
+        // Robustly check blocked status
+        try {
+          const blockRecord = await prisma.blockedUser.findFirst({
+            where: {
+              OR: [
+                { blockerUserId: userId, blockedUserId: otherParticipant },
+                { blockerUserId: otherParticipant, blockedUserId: userId },
+              ]
+            }
+          });
 
-        if (blockRecord) {
-          isBlocked = true;
-          blockedBy = blockRecord.blockerUserId;
+          if (blockRecord) {
+            isBlocked = true;
+            blockedBy = blockRecord.blockerUserId;
+          }
+        } catch (err) {
+          console.error(`[ChatService] Failed to check block status for ${otherParticipant}:`, err);
+          // Fallback: assume not blocked so chat list still loads
         }
       }
 
