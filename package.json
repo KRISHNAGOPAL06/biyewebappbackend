@@ -8,7 +8,7 @@
     "dev": "tsx watch src/server.ts",
     "dev:watch": "nodemon --ext ts --watch src --exec tsx src/server.ts",
     "build": "tsc",
-    "start": "npx prisma migrate deploy && node --max-old-space-size=512 dist/server.js",
+    "start": "node --max-old-space-size=512 dist/server.js",
     "postinstall": "prisma generate --schema=./prisma/schema.prisma",
     "test": "NODE_OPTIONS=--experimental-vm-modules jest",
     "test:watch": "NODE_OPTIONS=--experimental-vm-modules jest --watch",
