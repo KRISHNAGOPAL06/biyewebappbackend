@@ -203,6 +203,12 @@ export class RecommendationService {
       include: {
         photos: {
           where: { moderationStatus: "approved", deletedAt: null },
+          select: {
+            id: true,
+            url: true,
+            objectKey: true,
+            privacyLevel: true, // Needed for frontend blurring logic
+          }
         },
       },
     });
