@@ -487,7 +487,13 @@ export class MediaService {
       });
 
       if (activeSub) {
-        return 'full';
+        // Subscription only unlocks PUBLIC photos. 
+        // If privacy is 'connections'/'request', subscription does NOT override connection requirement.
+        // Since we already checked connection above and passed it, we are NOT connected.
+        if (photo.privacyLevel === 'public') {
+          return 'full';
+        }
+        // If not public (e.g. connections), fall through to 'blurred'
       }
     }
 
