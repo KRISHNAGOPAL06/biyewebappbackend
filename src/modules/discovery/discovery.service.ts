@@ -32,7 +32,7 @@ export class DiscoveryService {
     console.log(maskedProfiles);
 
 
-    const result = createPaginationResult(profiles, limit);
+    const result = createPaginationResult(profiles as any, limit);
     console.log(result);
 
 
@@ -63,7 +63,7 @@ export class DiscoveryService {
       )
     );
 
-    const result = createPaginationResult(profiles, limit);
+    const result = createPaginationResult(profiles as any, limit);
 
     await cacheService.set(cacheKey, { ...result, data: maskedProfiles }, 60);
 
@@ -92,7 +92,7 @@ export class DiscoveryService {
       )
     );
 
-    const result = createPaginationResult(profiles, limit);
+    const result = createPaginationResult(profiles as any, limit);
 
     await cacheService.set(cacheKey, { ...result, data: maskedProfiles }, 120);
 
