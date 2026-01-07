@@ -240,6 +240,44 @@ class VendorAdminService {
     }
 
     /**
+     * Delete vendor permanently
+     */
+    async deleteVendor(vendorId: string, adminUserId: string) {
+        const vendor = await prisma.vendor.findUnique({
+            where: { id: vendorId },
+        });
+
+        if (!vendor) {
+            throw new AppError('Vendor not found', 404, 'VENDOR_NOT_FOUND');
+        }
+
+        // Delete all related data in transaction
+        await prisma.$transaction(async (tx) => {
+            // Delete vendor sessions
+            await tx.vendorSession.deleteMany({ where: { vendorId } });
+
+            // Delete service bookings
+            await tx.serviceBooking.deleteMany({ where: { vendorId } });
+
+            // Delete service reviews
+            await tx.serviceReview.deleteMany({ where: { vendorId } });
+
+            // Delete vendor services
+            await tx.vendorService.deleteMany({ where: { vendorId } });
+
+            // Delete vendor profile
+            await tx.vendorProfile.deleteMany({ where: { vendorId } });
+
+            // Delete the vendor
+            await tx.vendor.delete({ where: { id: vendorId } });
+        });
+
+        logger.info('Vendor deleted permanently', { vendorId, adminUserId, businessName: vendor.businessName });
+
+        return { deleted: true, vendorId, businessName: vendor.businessName };
+    }
+
+    /**
      * Handle vendor approval action
      */
     async handleApprovalAction(vendorId: string, adminUserId: string, dto: VendorApprovalDTO) {

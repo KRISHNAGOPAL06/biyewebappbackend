@@ -2,8 +2,6 @@
 node_modules/
 
 # Environment variables
-.env
-.env.local
 .env.*.local
 
 #Upload Media
@@ -43,3 +41,4 @@ Thumbs.db
 
 # Prisma
 
+config.bat
