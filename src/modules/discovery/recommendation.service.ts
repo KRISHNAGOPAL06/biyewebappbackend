@@ -1,5 +1,6 @@
 import { Profile } from '@prisma/client';
 // import { rankingService } from './ranking.service.js';
+import { profilePermissions } from '../profile/profile.permissions.js';
 import { logger } from '../../utils/logger.js';
 import { entitlementService } from '../payments/entitlement.service.js';
 
@@ -264,9 +265,16 @@ export class RecommendationService {
       ranked
     );
 
-    console.log(enrichedRecommendations);
+    const maskedRecommendations = await Promise.all(
+      enrichedRecommendations.map((profile: any) => {
+        const isConnected = profile.interest?.status === 'accepted';
+        return profilePermissions.maskProfile(profile as any, { userId, isConnected });
+      })
+    );
 
-    return enrichedRecommendations;
+    console.log(maskedRecommendations);
+
+    return maskedRecommendations;
   }
 
 
@@ -382,9 +390,16 @@ export class RecommendationService {
       visibleProfiles
     );
 
-    console.log(enrichedProfiles)
+    const maskedProfiles = await Promise.all(
+      enrichedProfiles.map((profile: any) => {
+        const isConnected = profile.interest?.status === 'accepted';
+        return profilePermissions.maskProfile(profile as any, { userId, isConnected });
+      })
+    );
 
-    return enrichedProfiles;
+    console.log(maskedProfiles);
+
+    return maskedProfiles;
   }
 
   async getNearbyProfiles(
@@ -506,9 +521,16 @@ export class RecommendationService {
       visibleNearbyProfiles
     );
 
-    console.log(enrichedNearbyProfiles);
+    const maskedNearbyProfiles = await Promise.all(
+      enrichedNearbyProfiles.map((profile: any) => {
+        const isConnected = profile.interest?.status === 'accepted';
+        return profilePermissions.maskProfile(profile as any, { userId, isConnected });
+      })
+    );
 
-    return enrichedNearbyProfiles;
+    console.log(maskedNearbyProfiles);
+
+    return maskedNearbyProfiles;
   }
 
   private async applyAdvancedRanking(user: Profile, profiles: Profile[]) {

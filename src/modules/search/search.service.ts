@@ -102,9 +102,10 @@ export class SearchService {
     );
 
     const maskedProfiles = await Promise.all(
-      enrichedRecommendations.map((profile: any) =>
-        profilePermissions.maskProfile(profile as any, { userId })
-      )
+      enrichedRecommendations.map((profile: any) => {
+        const isConnected = profile.interest?.status === 'accepted';
+        return profilePermissions.maskProfile(profile as any, { userId, isConnected });
+      })
     );
     console.log(maskedProfiles)
 

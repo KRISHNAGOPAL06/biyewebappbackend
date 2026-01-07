@@ -2,6 +2,8 @@ import { Request, Response, NextFunction } from 'express';
 import { profileService } from './profile.service.js';
 import { CreateProfileDTO, StepUpdateDTO } from './profile.dto.js';
 import { RequesterContext } from './profile.types.js';
+import { profilePermissions } from './profile.permissions.js';
+import { prisma } from '../../prisma.js';
 import { sendSuccess } from '../../utils/response.js';
 
 export class ProfileController {
@@ -50,14 +52,27 @@ export class ProfileController {
       console.log(userId);
 
       const profile = await profileService.getProfileById(id, requester);
-      console.log(profile);
 
+      // Check if they are connected
+      const interest = await prisma.interest.findFirst({
+        where: {
+          status: 'accepted',
+          OR: [
+            { fromUserId: userId, toUserId: profile.userId },
+            { fromUserId: profile.userId, toUserId: userId },
+          ],
+        },
+      });
 
-      // const maskedProfile = await profilePermissions.maskProfile(profile, requester);
-      // console.log(maskedProfile);
+      const isConnected = !!interest;
 
+      if (interest) {
+        (profile as any).interest = interest;
+      }
 
-      return sendSuccess(res, profile, 'Profile retrieved successfully', 200);
+      const maskedProfile = await profilePermissions.maskProfile(profile, { ...requester, isConnected });
+
+      return sendSuccess(res, maskedProfile, 'Profile retrieved successfully', 200);
     } catch (error) {
       return next(error);
     }
