@@ -33,9 +33,16 @@ router.post(
   mediaController.uploadFile.bind(mediaController)
 );
 
-router.get('/:photoId', optionalAuthMiddleware, mediaController.getPhotoById.bind(mediaController));
+// More specific routes must come before generic :photoId route
+router.patch(
+  '/:photoId/set-profile-picture',
+  authenticateToken,
+  mediaController.setProfilePicture.bind(mediaController)
+);
 
 router.delete('/:photoId', authenticateToken, mediaController.deletePhoto.bind(mediaController));
+
+router.get('/:photoId', optionalAuthMiddleware, mediaController.getPhotoById.bind(mediaController));
 
 router.get(
   '/profile/:profileId/photos',

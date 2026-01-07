@@ -34,7 +34,7 @@ export interface PhotoMetadata {
 
 export class MediaService {
   async createUploadUrl(dto: CreateUploadUrlDTO, requesterId: string): Promise<UploadUrlResponse> {
-    const { profileId, filename, mimeType, fileSize, privacyLevel } = dto;
+    const { profileId, filename, mimeType, fileSize, privacyLevel, isProfilePicture } = dto;
 
     await this.validateUploadRequest(dto);
 
@@ -64,6 +64,20 @@ export class MediaService {
       }
     }
 
+    // If this is being set as profile picture, unset all other profile pictures
+    if (isProfilePicture) {
+      await prisma.photo.updateMany({
+        where: {
+          profileId,
+          isProfilePicture: true,
+          deletedAt: null
+        },
+        data: {
+          isProfilePicture: false
+        }
+      });
+    }
+
     const sanitizedFilename = this.sanitizeFilename(filename);
     const objectKey = this.generateObjectKey(profileId, sanitizedFilename);
 
@@ -74,6 +88,7 @@ export class MediaService {
         fileSize,
         mimeType,
         privacyLevel,
+        isProfilePicture: isProfilePicture ?? false,
         moderationStatus: 'approved', // Auto-approve photos without admin review
       },
     });
@@ -84,6 +99,7 @@ export class MediaService {
       objectKey,
       requesterId,
       currentPhotoCount: currentPhotoCount + 1,
+      isProfilePicture: isProfilePicture ?? false,
     });
 
     const uploadResult = await this.generateSignedUploadUrl(objectKey, mimeType, fileSize);
@@ -263,6 +279,41 @@ export class MediaService {
     );
 
     return filteredPhotos.filter((p): p is PhotoMetadata => p !== null);
+  }
+
+  async setProfilePicture(photoId: string, requesterId: string): Promise<void> {
+    const photo = await prisma.photo.findUnique({
+      where: { id: photoId },
+      include: { profile: true },
+    });
+
+    if (!photo) {
+      throw new Error('Photo not found');
+    }
+
+    await this.authorizeProfileOwner(photo.profileId, requesterId);
+
+    // Unset all other profile pictures for this profile
+    await prisma.photo.updateMany({
+      where: {
+        profileId: photo.profileId,
+        isProfilePicture: true,
+        deletedAt: null,
+      },
+      data: {
+        isProfilePicture: false,
+      },
+    });
+
+    // Set this photo as profile picture
+    await prisma.photo.update({
+      where: { id: photoId },
+      data: {
+        isProfilePicture: true,
+      },
+    });
+
+    logger.info('Profile picture updated', { photoId, profileId: photo.profileId, requesterId });
   }
 
   private async validateUploadRequest(dto: CreateUploadUrlDTO): Promise<void> {

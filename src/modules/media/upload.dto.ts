@@ -8,6 +8,7 @@ export const CreateUploadUrlSchema = z.object({
   privacyLevel: z.enum(['public', 'matches', 'on_request', 'private'], {
     errorMap: () => ({ message: 'Invalid privacy level' }),
   }),
+  isProfilePicture: z.boolean().optional(),
 });
 
 export type CreateUploadUrlDTO = z.infer<typeof CreateUploadUrlSchema>;

@@ -184,6 +184,7 @@ model Photo {
   fileSize         Int?
   mimeType         String?
   privacyLevel     String    @default("connections") // public | connections | request
+  isProfilePicture Boolean   @default(false)
   moderationStatus String    @default("pending")
   moderationNote   String?
   createdAt        DateTime  @default(now())

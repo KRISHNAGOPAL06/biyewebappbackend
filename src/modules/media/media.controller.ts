@@ -140,6 +140,19 @@ export class MediaController {
     }
   }
 
+  async setProfilePicture(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { photoId } = req.params;
+      const userId = req.userId!;
+
+      await mediaService.setProfilePicture(photoId, userId);
+
+      return sendSuccess(res, null, 'Profile picture updated successfully', 200);
+    } catch (error) {
+      return next(error);
+    }
+  }
+
   async secureImage(req: Request, res: Response, next: NextFunction) {
     try {
       const { path: filePath } = req.query;
