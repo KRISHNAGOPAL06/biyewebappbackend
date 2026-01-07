@@ -173,8 +173,14 @@ export class VendorOnboardingController {
 
     static async createStripeCheckout(req: Request, res: Response, next: NextFunction) {
         try {
+            console.log('[DEBUG] createStripeCheckout req.body:', JSON.stringify(req.body));
+
             const vendorId = req.vendorId!;
-            const { planId: _planId, successUrl, cancelUrl, couponCode, paymentGateway = 'sslcommerz' } = req.body;
+            // Accept multiple specific field names to be robust against frontend changes
+            const { planId: _planId, successUrl, cancelUrl, couponCode, paymentGateway = 'sslcommerz', targetCurrency, currency, currencyCode, exchangeRate = 1 } = req.body;
+
+            const finalCurrency = targetCurrency || currency || currencyCode || 'USD';
+            console.log(`[DEBUG] Extracted: finalCurrency=${finalCurrency}, exchangeRate=${exchangeRate}, paymentGateway=${paymentGateway}`);
 
             // Get vendor and plan details (already has sale discount applied)
             const vendor = await planService.getVendorWithPlan(vendorId);
@@ -182,7 +188,11 @@ export class VendorOnboardingController {
                 throw new AppError('Vendor or plan not found', 404, 'VENDOR_NOT_FOUND');
             }
 
-            let finalAmount = vendor.plan.price;
+            // Calculate base amount in target currency
+            // Plan price is stored in BDT. We convert it to the user's currency.
+            // Plan price is stored in BDT. We convert it to the user's currency.
+            const rate = Number(exchangeRate);
+            let finalAmount = Math.ceil(vendor.plan.price * rate);
 
             // Apply coupon discount if provided
             if (couponCode) {
@@ -194,16 +204,16 @@ export class VendorOnboardingController {
                 }
             }
 
-            console.log('[Payment] Final payment amount:', finalAmount, 'Gateway:', paymentGateway);
+            console.log('[Payment] Final payment amount:', finalAmount, 'Currency:', targetCurrency, 'Gateway:', paymentGateway);
 
             let checkoutResult;
 
+            // Use Stripe gateway
             if (paymentGateway === 'stripe') {
-                // Use Stripe gateway
                 checkoutResult = await stripeGateway.initiatePayment({
                     paymentId: `vendor_${vendorId}_${Date.now()}`,
                     amount: finalAmount,
-                    currency: 'USD', // Stripe uses USD for international
+                    currency: finalCurrency, // Dynamic currency from frontend (robust check)
                     planName: vendor.plan.name,
                     planCode: vendor.plan.code,
                     profileId: vendorId,

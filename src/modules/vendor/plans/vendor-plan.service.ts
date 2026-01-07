@@ -217,10 +217,11 @@ export class VendorPlanService {
         console.log('[Payment] Base effective price:', effectivePrice);
 
         // Apply sale discount (discountAmount) if available
-        if (adminPlan?.discountAmount && adminPlan.discountAmount > 0) {
-            effectivePrice = Math.max(0, effectivePrice - adminPlan.discountAmount);
-            console.log('[Payment] After discount:', effectivePrice, 'Discount applied:', adminPlan.discountAmount);
-        }
+        // DISABLED per user request: "automatic coupon discount allocated where i am not apply"
+        // if (adminPlan?.discountAmount && adminPlan.discountAmount > 0) {
+        //    effectivePrice = Math.max(0, effectivePrice - adminPlan.discountAmount);
+        //    console.log('[Payment] After discount:', effectivePrice, 'Discount applied:', adminPlan.discountAmount);
+        // }
 
         // Normalize plan object for payment gateway
         return {
