@@ -9,7 +9,10 @@ export class PrivacyController {
             const dto: UpdatePhotoPrivacyDTO = req.body;
             const userId = req.userId;
 
+            console.log('DEBUG: updatePhotoPrivacy called', { userId, dto });
+
             if (!userId) {
+                console.log('DEBUG: userId missing');
                 return res.status(401).json({
                     success: false,
                     error: { message: 'Unauthorized', code: 'UNAUTHORIZED' },
@@ -22,12 +25,14 @@ export class PrivacyController {
             });
 
             const result = await privacyService.updatePhotoPrivacy(userId, dto);
+            console.log('DEBUG: updatePhotoPrivacy success', result);
 
             res.status(200).json({
                 success: true,
                 data: result,
             });
         } catch (error: any) {
+            console.error('DEBUG: updatePhotoPrivacy error', error);
             logger.error('Error updating photo privacy', { error: error.message });
             next(error);
         }

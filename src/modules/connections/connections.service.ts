@@ -782,7 +782,7 @@ export class ConnectionsService {
 
       // Mask profile based on permissions
       const matchedProfile = profileData
-        ? await profilePermissions.maskProfile(profileData, requester)
+        ? await profilePermissions.maskProfile(profileData, { ...requester, isConnected: true })
         : null;
 
       matches.push({

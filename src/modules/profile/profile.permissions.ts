@@ -130,9 +130,9 @@ export class ProfilePermissions {
     }
 
     //
-    // GUARDIAN or PREMIUM: see more details (but location masked)
+    // GUARDIAN or PREMIUM or CONNECTED: see more details (but location masked)
     //
-    if (isGuardian || isPremium) {
+    if (isGuardian || isPremium || (requester as any).isConnected) {
       return {
         ...maskedProfile,
 
