@@ -50,6 +50,8 @@ export interface ThreadWithPreview {
     createdAt: Date;
   };
   profile: any,
+  isBlocked?: boolean;
+  blockedBy?: string;
   createdAt: Date;
   updatedAt: Date;
 }

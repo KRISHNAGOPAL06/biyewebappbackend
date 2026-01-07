@@ -324,20 +324,40 @@ export class ChatService {
       },
     });
 
-    // Filter out blocked users
-    const validThreads = [];
-    for (const thread of threads) {
-      const otherParticipant = thread.participants.find(p => p !== userId);
+    // Filter out blocked users logic REMOVED - now we label them
+
+    // We need to async check blocks for all threads
+    const threadsWithBlockStatus = await Promise.all(threads.map(async (thread) => {
+      const otherParticipant = thread.participants.find(p => p !== userId)!;
+
+      let isBlocked = false;
+      let blockedBy = undefined;
+
       if (otherParticipant) {
-        const isBlocked = await blockService.isBlocked(userId, otherParticipant);
-        if (!isBlocked) {
-          validThreads.push(thread);
+        // We need to know who blocked whom
+        // isBlocked() returns boolean if ANY block exists
+        // Let's get the specific block record
+        const blockRecord = await prisma.blockedUser.findFirst({
+          where: {
+            OR: [
+              { blockerUserId: userId, blockedUserId: otherParticipant },
+              { blockerUserId: otherParticipant, blockedUserId: userId },
+            ]
+          }
+        });
+
+        if (blockRecord) {
+          isBlocked = true;
+          blockedBy = blockRecord.blockerUserId;
         }
       }
-    }
 
-    const hasMore = validThreads.length > limit;
-    const items = hasMore ? validThreads.slice(0, -1) : validThreads;
+      return { ...thread, isBlocked, blockedBy };
+    }));
+
+
+    const hasMore = threadsWithBlockStatus.length > limit;
+    const items = hasMore ? threadsWithBlockStatus.slice(0, -1) : threadsWithBlockStatus;
 
     const otherUserIds = items.map(thread =>
       thread.participants.find(id => id !== userId)!
@@ -411,6 +431,8 @@ export class ChatService {
           }
           : undefined,
         profile: maskedProfileMap.get(otherUserId) ?? null,
+        isBlocked: thread.isBlocked,
+        blockedBy: thread.blockedBy,
         createdAt: thread.createdAt,
         updatedAt: thread.updatedAt,
       };
