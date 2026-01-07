@@ -73,9 +73,8 @@ export class MediaController {
         try {
           const sharp = (await import('sharp')).default;
           const transform = sharp()
-            .resize({ width: 200, fit: 'inside' }) // Downscale drastically for security (impossible to recover HD)
-            .blur(50) // Ultra Heavy blur
-            .modulate({ brightness: 0.1, saturation: 0 }); // Almost black and grayscale (Complete Dark request)
+            .resize({ width: 200, fit: 'inside' }) // Downscale drastically for security
+            .blur(50); // Keep Ultra Heavy blur for security, but allow colors
 
           stream.pipe(transform).pipe(res);
         } catch (sharpError) {
