@@ -153,6 +153,26 @@ class VendorAdminController {
             next(error);
         }
     }
+
+    /**
+     * Delete vendor permanently
+     */
+    async deleteVendor(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const adminUserId = req.userId;
+            const { id } = req.params;
+
+            if (!adminUserId) {
+                sendSuccess(res, null, 'Unauthorized', 401);
+                return;
+            }
+
+            const result = await vendorAdminService.deleteVendor(id, adminUserId);
+            sendSuccess(res, result, 'Vendor deleted permanently', 200);
+        } catch (error) {
+            next(error);
+        }
+    }
 }
 
 export const vendorAdminController = new VendorAdminController();

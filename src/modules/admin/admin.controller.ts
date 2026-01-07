@@ -129,13 +129,16 @@ export class AdminController {
     async getVendors(req: Request, res: Response) {
         try {
             const params = paginationSchema.parse(req.query);
+            console.log('AdminController.getVendors - params:', params);
             const result = await adminService.getVendors(params);
+            console.log('AdminController.getVendors - result count:', result.data?.length);
             res.json({
                 success: true,
                 ...result
             });
         } catch (error: any) {
             console.error('Get vendors error:', error);
+            console.error('Error stack:', error.stack);
             res.status(500).json({
                 success: false,
                 error: {

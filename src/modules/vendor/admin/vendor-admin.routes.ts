@@ -44,4 +44,7 @@ router.put(
     vendorAdminController.suspend.bind(vendorAdminController)
 );
 
+// Delete vendor permanently
+router.delete('/vendors/:id', vendorAdminController.deleteVendor.bind(vendorAdminController));
+
 export default router;
