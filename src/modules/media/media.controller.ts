@@ -74,7 +74,7 @@ export class MediaController {
           const sharp = (await import('sharp')).default;
           const transform = sharp()
             .resize({ width: 200, fit: 'inside' }) // Downscale drastically for security
-            .blur(50); // Keep Ultra Heavy blur for security, but allow colors
+            .blur(20); // Reduced blur level as requested
 
           stream.pipe(transform).pipe(res);
         } catch (sharpError) {
