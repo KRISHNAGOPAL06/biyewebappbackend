@@ -323,6 +323,12 @@ export class RecommendationService {
             moderationStatus: 'approved',
             deletedAt: null,
           },
+          select: {
+            id: true,
+            url: true,
+            objectKey: true,
+            privacyLevel: true,
+          }
         },
       },
     });
@@ -445,6 +451,12 @@ export class RecommendationService {
             moderationStatus: 'approved',
             deletedAt: null,
           },
+          select: {
+            id: true,
+            url: true,
+            objectKey: true,
+            privacyLevel: true,
+          }
         },
       },
     });
