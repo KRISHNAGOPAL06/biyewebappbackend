@@ -141,7 +141,7 @@ export class MediaService {
     return this.sanitizePhotoMetadata(photo);
   }
 
-  async getPhotoFile(photoId: string, requesterId?: string): Promise<{ path: string, mimeType: string } | null> {
+  async getPhotoFile(photoId: string, requesterId?: string): Promise<{ path: string, mimeType: string, access: 'full' | 'blurred' } | null> {
     const photo = await prisma.photo.findUnique({
       where: { id: photoId },
       include: { profile: true },
@@ -150,13 +150,14 @@ export class MediaService {
     if (!photo || !photo.objectKey) return null;
 
     // Check permissions
-    const canView = await this.checkPhotoViewPermission(photo, requesterId);
-    if (!canView) return null;
+    const access = await this.checkPhotoViewPermission(photo, requesterId);
+    if (access === 'none') return null;
 
     const fullPath = path.resolve(process.cwd(), 'uploads', photo.objectKey);
     return {
       path: fullPath,
-      mimeType: 'image/jpeg' // You might want to store/infer proper mime type
+      mimeType: 'image/jpeg', // You might want to store/infer proper mime type
+      access
     };
   }
 
@@ -398,21 +399,25 @@ export class MediaService {
 
   //   return false;
   // }
-  private async checkPhotoViewPermission(photo: any, requesterId?: string): Promise<boolean> {
+  private async checkPhotoViewPermission(photo: any, requesterId?: string): Promise<'full' | 'blurred' | 'none'> {
     // 1. If public and approved, anyone can view (even unauthenticated)
     if (photo.privacyLevel === 'public' && photo.moderationStatus === 'approved') {
-      return true;
+      // Without auth, public photos are BLURRED by default unless we want them fully public
+      // Requirement: "seen by inspecting" implies it WAS fully public but we want to restrictions?
+      // Actually, for unauth users, maybe blurred is safer?
+      // User is logged in (HeaderLoggedIn), so requesterId exists.
+      if (!requesterId) return 'blurred';
     }
 
     // 2. If valid auth logic required but missing requester
     if (!requesterId) {
-      return false;
+      return 'none';
     }
 
     const user = await prisma.user.findUnique({ where: { id: requesterId } });
 
     if (!user) {
-      return false;
+      return 'none';
     }
 
     let isOwnerOrLinked = false;
@@ -435,25 +440,64 @@ export class MediaService {
 
     // Moderation: only owner/linked can see unapproved photos
     if (photo.moderationStatus !== 'approved' && !isOwnerOrLinked) {
-      return false;
+      return 'none';
     }
 
-    // Public photos are always visible
-    if (photo.privacyLevel === 'public') {
-      return true;
-    }
-
-    // Owner or linked parent can see non-public photos
+    // Owner or linked parent can see EVERYTHING
     if (isOwnerOrLinked) {
-      return true;
+      return 'full';
     }
 
     // Explicitly private: only owner/linked
     if (photo.privacyLevel === 'private') {
-      return false;
+      return 'none';
     }
 
-    return false;
+    // --- LOGIC FOR OTHER VIEWERS ---
+
+    // 1. Check Connection Status (Overrides everything)
+    // We need to check if requester is connected to photo.profile.userId
+    // Connection is bidirectional.
+    const connection = await prisma.interest.findFirst({
+      where: {
+        OR: [
+          { fromUserId: requesterId, toUserId: photo.profile.userId, status: 'accepted' },
+          { fromUserId: photo.profile.userId, toUserId: requesterId, status: 'accepted' }
+        ]
+      }
+    });
+
+    if (connection) {
+      return 'full';
+    }
+
+    // 2. Check Subscription (For public/request photos)
+    // Find profile for this user first
+    const requesterProfile = await prisma.profile.findFirst({
+      where: { userId: requesterId }
+    });
+
+    if (requesterProfile) {
+      const activeSub = await prisma.subscription.findFirst({
+        where: {
+          profileId: requesterProfile.id,
+          status: 'active',
+          endAt: { gt: new Date() }
+        }
+      });
+
+      if (activeSub) {
+        return 'full';
+      }
+    }
+
+
+
+    // If no plan and not connected
+    // Public photos -> Blurred
+    // Connections -> Blurred (as per UI showing lock)
+    // Request -> Blurred
+    return 'blurred';
   }
 
   private sanitizePhotoMetadata(photo: any): PhotoMetadata {

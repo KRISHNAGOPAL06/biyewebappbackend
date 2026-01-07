@@ -65,10 +65,26 @@ export class MediaController {
 
       stream.on('error', (err) => {
         logger.error('Error streaming file', { photoId, error: err });
-        res.status(404).end();
+        // Only header check needed if we haven't sent response yet
+        if (!res.headersSent) res.status(404).end();
       });
 
-      stream.pipe(res);
+      if (fileData.access === 'blurred') {
+        try {
+          const sharp = (await import('sharp')).default;
+          const transform = sharp()
+            .resize({ width: 200, fit: 'inside' }) // Downscale drastically for security (impossible to recover HD)
+            .blur(15); // Heavy blur
+
+          stream.pipe(transform).pipe(res);
+        } catch (sharpError) {
+          logger.error('Sharp processing error', { error: sharpError });
+          // Fallback: If sharp fails, do NOT send clear image. Send 500.
+          if (!res.headersSent) res.status(500).end();
+        }
+      } else {
+        stream.pipe(res);
+      }
     } catch (error) {
       return next(error);
     }

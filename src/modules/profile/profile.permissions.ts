@@ -280,10 +280,11 @@ export class ProfilePermissions {
     }) > 0;
 
     if (!hasActiveSubscription) {
-      // 3 Blur if no membership - remove URL but keep photo metadata
+      // 3 Blur if no membership (or whatever requirement) - Keep URL but rely on backend enforcement
       return filtered.map(p => ({
         ...p,
-        url: undefined, // Remove real URL
+        url: `/api/v1/media/${p.id}`,
+        objectKey: undefined, // Remove key to prevent reconstruction
         isBlurred: true, // Signal frontend to show blur
       }));
     }
