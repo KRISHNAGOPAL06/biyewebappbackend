@@ -20,6 +20,8 @@ import { ThreadParticipantResolver } from './threadParticipant.resolver.js';
 import { maskRegisteredId } from '../../utils/mask.helper.js';
 import { presenceService } from '../../utils/presence.service.js';
 
+import { blockService } from '../block/block.service.js';
+
 export class ChatService {
   private io: ChatServer | null = null;
 
@@ -33,6 +35,12 @@ export class ChatService {
     // const aiModerator = new AIModerationService(process.env.OPENAI_API_KEY!);
 
     const { threadId, fromUserId, toUserId, content, metadata = {} } = params;
+
+    // Check if blocked
+    const isBlocked = await blockService.isBlocked(fromUserId, toUserId);
+    if (isBlocked) {
+      throw new Error('MESSAGE_BLOCKED: You cannot send messages to this user.');
+    }
 
     // Get sender's profile for entitlement check
     const senderProfile = await prisma.profile.findUnique({
@@ -316,8 +324,20 @@ export class ChatService {
       },
     });
 
-    const hasMore = threads.length > limit;
-    const items = hasMore ? threads.slice(0, -1) : threads;
+    // Filter out blocked users
+    const validThreads = [];
+    for (const thread of threads) {
+      const otherParticipant = thread.participants.find(p => p !== userId);
+      if (otherParticipant) {
+        const isBlocked = await blockService.isBlocked(userId, otherParticipant);
+        if (!isBlocked) {
+          validThreads.push(thread);
+        }
+      }
+    }
+
+    const hasMore = validThreads.length > limit;
+    const items = hasMore ? validThreads.slice(0, -1) : validThreads;
 
     const otherUserIds = items.map(thread =>
       thread.participants.find(id => id !== userId)!
