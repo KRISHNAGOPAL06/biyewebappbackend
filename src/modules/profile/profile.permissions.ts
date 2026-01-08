@@ -84,6 +84,7 @@ export class ProfilePermissions {
       userId: profile.userId,
       registeredUserId: profile.registeredUserId,
       displayName: profile.displayName || '',
+      user: profile.user, // ✅ include user details (name) if present
       interest, // ✅ always included
       createdAt: profile.createdAt,
     };

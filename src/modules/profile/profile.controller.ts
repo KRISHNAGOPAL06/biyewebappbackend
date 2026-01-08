@@ -41,17 +41,19 @@ export class ProfileController {
       const { id } = req.params;
       const userId = (req as any).userId;
 
+      // 1. Fetch profile FIRST to check ownership
+      const profile = await profileService.getProfileById(id, { userId }); // temporary context just to fetch
+
+      const isOwner = profile.userId === userId;
+
       const requester: RequesterContext = {
         userId,
-        isOwner: false,
-        isGuardian: false,
-        isPremium: false,
+        isOwner,
+        isGuardian: false, // TODO: logic if needed
+        isPremium: false,  // TODO: logic if needed
       };
 
-      console.log(id);
-      console.log(userId);
-
-      const profile = await profileService.getProfileById(id, requester);
+      console.log('getProfileById', { id, userId, isOwner });
 
       // Check if they are connected
       const interest = await prisma.interest.findFirst({
