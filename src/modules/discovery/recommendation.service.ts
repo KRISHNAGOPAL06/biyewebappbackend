@@ -101,7 +101,6 @@ export class RecommendationService {
       where: { userId: effectiveUserId },
       include: { preferences: true },
     });
-    console.log(userProfile);
 
 
     if (!userProfile) throw new Error("Profile missing");
@@ -213,7 +212,12 @@ export class RecommendationService {
         },
       },
     });
-    console.log(profiles);
+
+    console.log("--- [Recommendation] getRecommendations ---");
+    console.log("Effective User ID:", effectiveUserId);
+    console.log("Base Query:", JSON.stringify(baseQuery, null, 2));
+    console.log("Found raw profiles count:", profiles.length);
+    // console.log("First profile sample:", profiles[0]);
 
     // ----------------------------------------
     // 5.5 Tier Visibility Filtering
@@ -340,7 +344,8 @@ export class RecommendationService {
         },
       },
     });
-    console.log(profiles)
+    console.log(`[Recommendation] getNewProfiles: Found ${profiles.length} profiles`);
+    // console.log("New Query:", JSON.stringify(baseQuery, null, 2));
 
     // ----------------------------------------
     // Tier Visibility Filtering
@@ -475,6 +480,8 @@ export class RecommendationService {
         },
       },
     });
+
+
 
     const nearbyProfiles = profiles.filter((profile: any) => {
       const profileState = (profile.location as any)?.state;
