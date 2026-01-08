@@ -24,11 +24,18 @@ export class DiscoveryService {
     console.log(profiles);
 
 
-    const maskedProfiles = await Promise.all(
-      profiles.map((profile: any) =>
-        profilePermissions.maskProfile(profile as any, { userId })
+    const maskedProfiles = (
+      await Promise.all(
+        profiles.map(async (profile: any) => {
+          try {
+            return await profilePermissions.maskProfile(profile as any, { userId });
+          } catch (error) {
+            logger.warn('Failed to mask profile (skipping)', { profileId: profile.id, error });
+            return null;
+          }
+        })
       )
-    );
+    ).filter((p) => p !== null);
     console.log(maskedProfiles);
 
 
@@ -57,11 +64,18 @@ export class DiscoveryService {
     // const maskedProfiles = profiles.map((profile: any) =>
     //   profilePermissions.maskProfile(profile as any, { userId })
     // );
-    const maskedProfiles = await Promise.all(
-      profiles.map((profile: any) =>
-        profilePermissions.maskProfile(profile as any, { userId })
+    const maskedProfiles = (
+      await Promise.all(
+        profiles.map(async (profile: any) => {
+          try {
+            return await profilePermissions.maskProfile(profile as any, { userId });
+          } catch (error) {
+            logger.warn('Failed to mask profile (skipping)', { profileId: profile.id, error });
+            return null;
+          }
+        })
       )
-    );
+    ).filter((p) => p !== null);
 
     const result = createPaginationResult(profiles as any, limit);
 
@@ -86,11 +100,18 @@ export class DiscoveryService {
     // const maskedProfiles = profiles.map((profile: any) =>
     //   profilePermissions.maskProfile(profile as any, { userId })
     // );
-    const maskedProfiles = await Promise.all(
-      profiles.map((profile: any) =>
-        profilePermissions.maskProfile(profile as any, { userId })
+    const maskedProfiles = (
+      await Promise.all(
+        profiles.map(async (profile: any) => {
+          try {
+            return await profilePermissions.maskProfile(profile as any, { userId });
+          } catch (error) {
+            logger.warn('Failed to mask profile (skipping)', { profileId: profile.id, error });
+            return null;
+          }
+        })
       )
-    );
+    ).filter((p) => p !== null);
 
     const result = createPaginationResult(profiles as any, limit);
 

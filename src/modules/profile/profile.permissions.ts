@@ -85,6 +85,7 @@ export class ProfilePermissions {
       registeredUserId: profile.registeredUserId,
       displayName: profile.displayName || '',
       interest, // ✅ always included
+      createdAt: profile.createdAt,
     };
 
     //

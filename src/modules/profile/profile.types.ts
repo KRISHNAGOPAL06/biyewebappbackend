@@ -167,6 +167,7 @@ export interface MaskedProfile {
   // Photos
   photos?: PhotoData[];
 
+  createdAt: Date;
 }
 
 
