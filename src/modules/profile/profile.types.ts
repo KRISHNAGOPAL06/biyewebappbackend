@@ -171,6 +171,36 @@ export interface MaskedProfile {
 
   // Family
   maritalStatus?: string;
+  fatherOccupation?: string;
+  motherOccupation?: string;
+  siblingsCount?: number;
+  childrenCount?: number;
+  childrenStatus?: string;
+
+  // Lifestyle
+  hobbies?: string[];
+  dietPreference?: string;
+  smokingHabit?: string;
+  drinkingHabit?: string;
+  exerciseRoutine?: string;
+  petPreference?: string;
+  livingSituation?: string;
+
+  // Partner Preferences
+  prefAgeRangeFrom?: number;
+  prefAgeRangeTo?: number;
+  prefHeightFrom?: Decimal | null;
+  prefHeightTo?: Decimal | null;
+  prefLocation?: any;
+  prefEducation?: string;
+  prefProfession?: string;
+  prefReligion?: string;
+  prefMaritalStatus?: string;
+  prefChildrenCount?: number;
+  prefChildrenStatus?: string;
+  prefDietPreference?: string;
+  prefSmokingHabit?: string;
+  prefDrinkingHabit?: string;
 
   // Photos
   photos?: PhotoData[];
