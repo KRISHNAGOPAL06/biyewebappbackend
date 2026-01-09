@@ -114,6 +114,36 @@ export class ProfilePermissions {
 
         // Family
         maritalStatus: profile.maritalStatus,
+        fatherOccupation: profile.fatherOccupation,
+        motherOccupation: profile.motherOccupation,
+        siblingsCount: profile.siblingsCount,
+        childrenCount: profile.childrenCount,
+        childrenStatus: profile.childrenStatus,
+
+        // Lifestyle
+        hobbies: profile.hobbies,
+        dietPreference: profile.dietPreference,
+        smokingHabit: profile.smokingHabit,
+        drinkingHabit: profile.drinkingHabit,
+        exerciseRoutine: profile.exerciseRoutine,
+        petPreference: profile.petPreference,
+        livingSituation: profile.livingSituation,
+
+        // Partner Preferences
+        prefAgeRangeFrom: profile.prefAgeRangeFrom,
+        prefAgeRangeTo: profile.prefAgeRangeTo,
+        prefHeightFrom: profile.prefHeightFrom,
+        prefHeightTo: profile.prefHeightTo,
+        prefLocation: profile.prefLocation,
+        prefEducation: profile.prefEducation,
+        prefProfession: profile.prefProfession,
+        prefReligion: profile.prefReligion,
+        prefMaritalStatus: profile.prefMaritalStatus,
+        prefChildrenCount: profile.prefChildrenCount,
+        prefChildrenStatus: profile.prefChildrenStatus,
+        prefDietPreference: profile.prefDietPreference,
+        prefSmokingHabit: profile.prefSmokingHabit,
+        prefDrinkingHabit: profile.prefDrinkingHabit,
 
         // Photos (all photos)
         photos: profile.photos || [],
@@ -156,6 +186,36 @@ export class ProfilePermissions {
 
         // Family
         maritalStatus: profile.maritalStatus,
+        fatherOccupation: profile.fatherOccupation,
+        motherOccupation: profile.motherOccupation,
+        siblingsCount: profile.siblingsCount,
+        childrenCount: profile.childrenCount,
+        childrenStatus: profile.childrenStatus,
+
+        // Lifestyle
+        hobbies: profile.hobbies,
+        dietPreference: profile.dietPreference,
+        smokingHabit: profile.smokingHabit,
+        drinkingHabit: profile.drinkingHabit,
+        exerciseRoutine: profile.exerciseRoutine,
+        petPreference: profile.petPreference,
+        livingSituation: profile.livingSituation,
+
+        // Partner Preferences
+        prefAgeRangeFrom: profile.prefAgeRangeFrom,
+        prefAgeRangeTo: profile.prefAgeRangeTo,
+        prefHeightFrom: profile.prefHeightFrom,
+        prefHeightTo: profile.prefHeightTo,
+        prefLocation: profile.prefLocation,
+        prefEducation: profile.prefEducation,
+        prefProfession: profile.prefProfession,
+        prefReligion: profile.prefReligion,
+        prefMaritalStatus: profile.prefMaritalStatus,
+        prefChildrenCount: profile.prefChildrenCount,
+        prefChildrenStatus: profile.prefChildrenStatus,
+        prefDietPreference: profile.prefDietPreference,
+        prefSmokingHabit: profile.prefSmokingHabit,
+        prefDrinkingHabit: profile.prefDrinkingHabit,
 
         // Photos (all)
         photos: this.filterPhotos(profile.photos || [], 'all'),
@@ -186,6 +246,36 @@ export class ProfilePermissions {
 
       // Family
       maritalStatus: profile.maritalStatus,
+      fatherOccupation: profile.fatherOccupation,
+      motherOccupation: profile.motherOccupation,
+      siblingsCount: profile.siblingsCount,
+      childrenCount: profile.childrenCount,
+      childrenStatus: profile.childrenStatus,
+
+      // Lifestyle
+      hobbies: profile.hobbies,
+      dietPreference: profile.dietPreference,
+      smokingHabit: profile.smokingHabit,
+      drinkingHabit: profile.drinkingHabit,
+      exerciseRoutine: profile.exerciseRoutine,
+      petPreference: profile.petPreference,
+      livingSituation: profile.livingSituation,
+
+      // Partner Preferences
+      prefAgeRangeFrom: profile.prefAgeRangeFrom,
+      prefAgeRangeTo: profile.prefAgeRangeTo,
+      prefHeightFrom: profile.prefHeightFrom,
+      prefHeightTo: profile.prefHeightTo,
+      prefLocation: profile.prefLocation,
+      prefEducation: profile.prefEducation,
+      prefProfession: profile.prefProfession,
+      prefReligion: profile.prefReligion,
+      prefMaritalStatus: profile.prefMaritalStatus,
+      prefChildrenCount: profile.prefChildrenCount,
+      prefChildrenStatus: profile.prefChildrenStatus,
+      prefDietPreference: profile.prefDietPreference,
+      prefSmokingHabit: profile.prefSmokingHabit,
+      prefDrinkingHabit: profile.prefDrinkingHabit,
 
       // Photos (public only, blurred if viewed profile has no subscription)
       photos: await this.filterPhotosWithMembershipCheck(profile.id, profile.photos || [], 'public'),
